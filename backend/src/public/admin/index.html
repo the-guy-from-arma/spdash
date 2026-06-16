@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sea Power MP Owner Dashboard</title>
+    <link rel="stylesheet" href="/admin/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <h1>Sea Power MP Servers</h1>
+        <p>Verify public listings, block bad hosts, and watch recent heartbeats.</p>
+      </div>
+      <div class="auth">
+        <input id="adminToken" type="password" placeholder="Admin token" autocomplete="current-password">
+        <button id="saveToken" type="button">Save</button>
+        <button id="refresh" type="button">Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary" aria-label="Summary">
+        <div>
+          <span id="totalCount">0</span>
+          <label>Total</label>
+        </div>
+        <div>
+          <span id="verifiedCount">0</span>
+          <label>Verified</label>
+        </div>
+        <div>
+          <span id="pendingCount">0</span>
+          <label>Pending</label>
+        </div>
+        <div>
+          <span id="blockedCount">0</span>
+          <label>Blocked</label>
+        </div>
+      </section>
+
+      <section class="toolbar" aria-label="Filters">
+        <input id="filter" type="search" placeholder="Filter by name, IP, mission, version">
+        <select id="statusFilter">
+          <option value="all">All statuses</option>
+          <option value="verified">Verified</option>
+          <option value="pending">Pending</option>
+          <option value="blocked">Blocked</option>
+        </select>
+      </section>
+
+      <section class="table-wrap" aria-label="Server listings">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Connect</th>
+              <th>Mode</th>
+              <th>Players</th>
+              <th>Versions</th>
+              <th>Required Mods</th>
+              <th>Last Seen</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="serversBody">
+            <tr>
+              <td colspan="9" class="empty">Enter the owner token and refresh.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="/admin/admin.js"></script>
+  </body>
+</html>

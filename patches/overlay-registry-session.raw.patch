@@ -1,0 +1,272 @@
+diff --git a/src/Gameplay/MultiplayerUI.cs b/src/Gameplay/MultiplayerUI.cs
+index 0f1daa5..3cb1399 100644
+--- a/src/Gameplay/MultiplayerUI.cs
++++ b/src/Gameplay/MultiplayerUI.cs
+@@ -1,7 +1,11 @@
+ using HarmonyLib;
+ using SeaPower;
+ using SeapowerMultiplayer.Transport;
++using System;
++using System.Collections.Generic;
++using System.IO;
+ using System.Reflection;
++using System.Text.RegularExpressions;
+ using UnityEngine;
+ 
+ namespace SeapowerMultiplayer
+@@ -73,6 +77,14 @@ namespace SeapowerMultiplayer
+         // Scroll hysteresis - prevents flicker when content is near the boundary
+         private bool _scrollActive = false;
+ 
++        // Registry/session handoff written by the desktop dashboard.
++        private const string RegistrySessionFileName = "seapower-mp-registry-session.json";
++        private RegistrySessionInfo? _registrySession;
++        private string? _registrySessionPath;
++        private DateTime _registrySessionWriteTimeUtc;
++        private float _registrySessionPollAt;
++        private bool _foldRegistryMods;
++
+         // Overall sync status
+         private enum SyncStatus { OK, Degraded, Issues }
+ 
+@@ -87,6 +99,8 @@ namespace SeapowerMultiplayer
+                 _unitCountTimer = 0.5f;
+                 RefreshUnitCounts();
+             }
++
++            RefreshRegistrySession();
+         }
+ 
+         private void RefreshUnitCounts()
+@@ -137,6 +151,141 @@ namespace SeapowerMultiplayer
+ 
+         }
+ 
++        private void RefreshRegistrySession()
++        {
++            if (Time.unscaledTime < _registrySessionPollAt) return;
++            _registrySessionPollAt = Time.unscaledTime + 2f;
++
++            try
++            {
++                _registrySessionPath ??= Path.Combine(BepInEx.Paths.ConfigPath, RegistrySessionFileName);
++                if (!File.Exists(_registrySessionPath))
++                {
++                    _registrySession = null;
++                    _registrySessionWriteTimeUtc = DateTime.MinValue;
++                    return;
++                }
++
++                DateTime writeTime = File.GetLastWriteTimeUtc(_registrySessionPath);
++                if (_registrySession != null && writeTime == _registrySessionWriteTimeUtc) return;
++
++                string json = File.ReadAllText(_registrySessionPath);
++                _registrySession = RegistrySessionInfo.FromJson(json);
++                _registrySessionWriteTimeUtc = writeTime;
++            }
++            catch (Exception ex)
++            {
++                _registrySession = new RegistrySessionInfo
++                {
++                    ServerName = "Registry handoff unreadable",
++                    LauncherStatus = ex.GetType().Name,
++                    VerificationStatus = "warning"
++                };
++            }
++        }
++
++        private sealed class RegistrySessionInfo
++        {
++            public string RegistryUrl = "";
++            public string ServerId = "";
++            public string ServerName = "";
++            public string LauncherStatus = "";
++            public string VerificationStatus = "";
++            public string Visibility = "";
++            public string Mode = "";
++            public string Transport = "";
++            public string PublicIp = "";
++            public int Port;
++            public string PluginVersion = "";
++            public string GameVersion = "";
++            public string ScenarioName = "";
++            public string ScenarioHash = "";
++            public bool IsPublicListed;
++            public readonly List<RegistryModInfo> RequiredMods = new();
++            public readonly List<string> MissingMods = new();
++
++            public bool HasMissingMods => MissingMods.Count > 0;
++
++            public static RegistrySessionInfo FromJson(string json)
++            {
++                var info = new RegistrySessionInfo
++                {
++                    RegistryUrl = JsonString(json, "registryUrl"),
++                    ServerId = JsonString(json, "serverId"),
++                    ServerName = JsonString(json, "serverName"),
++                    LauncherStatus = JsonString(json, "launcherStatus"),
++                    VerificationStatus = JsonString(json, "verificationStatus"),
++                    Visibility = JsonString(json, "visibility"),
++                    Mode = JsonString(json, "mode"),
++                    Transport = JsonString(json, "transport"),
++                    PublicIp = JsonString(json, "publicIp"),
++                    Port = JsonInt(json, "port"),
++                    PluginVersion = JsonString(json, "pluginVersion"),
++                    GameVersion = JsonString(json, "gameVersion"),
++                    ScenarioName = JsonString(json, "scenarioName"),
++                    ScenarioHash = JsonString(json, "scenarioHash"),
++                    IsPublicListed = JsonBool(json, "isPublicListed")
++                };
++
++                foreach (Match match in Regex.Matches(json, "\"requiredMods\"\\s*:\\s*\\[(.*?)\\]", RegexOptions.Singleline))
++                {
++                    foreach (Match item in Regex.Matches(match.Groups[1].Value, "\\{(.*?)\\}", RegexOptions.Singleline))
++                    {
++                        var body = item.Groups[1].Value;
++                        string name = JsonString(body, "name");
++                        string workshopId = JsonString(body, "workshopId");
++                        if (string.IsNullOrEmpty(name) && string.IsNullOrEmpty(workshopId)) continue;
++                        info.RequiredMods.Add(new RegistryModInfo
++                        {
++                            Name = string.IsNullOrEmpty(name) ? $"Workshop {workshopId}" : name,
++                            WorkshopId = workshopId,
++                            Required = !Regex.IsMatch(body, "\"required\"\\s*:\\s*false", RegexOptions.IgnoreCase)
++                        });
++                    }
++                }
++
++                Match missing = Regex.Match(json, "\"missingMods\"\\s*:\\s*\\[(.*?)\\]", RegexOptions.Singleline);
++                if (missing.Success)
++                {
++                    foreach (Match item in Regex.Matches(missing.Groups[1].Value, "\"((?:\\\\.|[^\"])*)\""))
++                        info.MissingMods.Add(Regex.Unescape(item.Groups[1].Value));
++                }
++
++                return info;
++            }
++        }
++
++        private sealed class RegistryModInfo
++        {
++            public string Name = "";
++            public string WorkshopId = "";
++            public bool Required = true;
++        }
++
++        private static string JsonString(string json, string name)
++        {
++            Match match = Regex.Match(json, $"\"{Regex.Escape(name)}\"\\s*:\\s*\"((?:\\\\.|[^\"])*)\"");
++            return match.Success ? Regex.Unescape(match.Groups[1].Value) : "";
++        }
++
++        private static int JsonInt(string json, string name)
++        {
++            Match match = Regex.Match(json, $"\"{Regex.Escape(name)}\"\\s*:\\s*(\\d+)");
++            return match.Success && int.TryParse(match.Groups[1].Value, out int value) ? value : 0;
++        }
++
++        private static bool JsonBool(string json, string name)
++        {
++            Match match = Regex.Match(json, $"\"{Regex.Escape(name)}\"\\s*:\\s*(true|false)", RegexOptions.IgnoreCase);
++            return match.Success && match.Groups[1].Value.Equals("true", StringComparison.OrdinalIgnoreCase);
++        }
++
++        private static string ShortText(string value, int max)
++        {
++            if (string.IsNullOrEmpty(value) || value.Length <= max) return value;
++            return value.Substring(0, Math.Max(0, max - 1)) + "...";
++        }
++
+         private void InitStyles()
+         {
+             if (_stylesInit) return;
+@@ -391,6 +540,8 @@ namespace SeapowerMultiplayer
+             GUILayout.Space(4);
+             DrawConnection();
+             GUILayout.Space(6);
++            DrawRegistrySession();
++            GUILayout.Space(6);
+             DrawTimeControls();
+             GUILayout.Space(6);
+ 
+@@ -471,6 +622,73 @@ namespace SeapowerMultiplayer
+                 GUILayout.Box("", _separatorStyle!, GUILayout.ExpandWidth(true));
+         }
+ 
++        private void DrawRegistrySession()
++        {
++            var session = _registrySession;
++            if (session == null) return;
++
++            DrawSectionTitle("O", "REGISTRY");
++
++            GUIStyle statusStyle = session.HasMissingMods ? _warningStyle! :
++                session.VerificationStatus == "verified" || session.LauncherStatus == "Ready" ? _successStyle! :
++                session.VerificationStatus == "blocked" ? _criticalStyle! : _dimLabelStyle!;
++
++            string serverName = string.IsNullOrEmpty(session.ServerName) ? "No server name" : session.ServerName;
++            GUILayout.Label($"Server: {ShortText(serverName, 34)}", _labelStyle);
++
++            if (!string.IsNullOrEmpty(session.LauncherStatus) || !string.IsNullOrEmpty(session.VerificationStatus))
++            {
++                string status = !string.IsNullOrEmpty(session.LauncherStatus)
++                    ? session.LauncherStatus
++                    : session.VerificationStatus;
++                GUILayout.Label($"Status: {status}", statusStyle);
++            }
++
++            if (!string.IsNullOrEmpty(session.ScenarioName))
++                GUILayout.Label($"Scenario: {ShortText(session.ScenarioName, 32)}", _labelStyle);
++            if (!string.IsNullOrEmpty(session.ScenarioHash))
++                GUILayout.Label($"Scenario hash: {ShortText(session.ScenarioHash, 18)}", _dimLabelStyle);
++
++            string endpoint = session.Port > 0 && !string.IsNullOrEmpty(session.PublicIp)
++                ? $"{session.PublicIp}:{session.Port}"
++                : "";
++            if (!string.IsNullOrEmpty(endpoint))
++                GUILayout.Label($"Endpoint: {endpoint}", _dimLabelStyle);
++
++            GUILayout.Label($"Mode: {session.Mode}  Transport: {session.Transport}", _dimLabelStyle);
++            if (!string.IsNullOrEmpty(session.PluginVersion) || !string.IsNullOrEmpty(session.GameVersion))
++                GUILayout.Label($"Plugin {session.PluginVersion}  Game {session.GameVersion}", _dimLabelStyle);
++
++            if (session.HasMissingMods)
++            {
++                GUILayout.Label($"Missing mods: {session.MissingMods.Count}", _warningStyle);
++                for (int i = 0; i < Mathf.Min(3, session.MissingMods.Count); i++)
++                    GUILayout.Label($"  - {ShortText(session.MissingMods[i], 30)}", _warningStyle);
++            }
++
++            _foldRegistryMods = DrawSectionHeader($"Required Mods ({session.RequiredMods.Count})", _foldRegistryMods,
++                session.HasMissingMods ? SyncStatus.Degraded : SyncStatus.OK);
++            if (_foldRegistryMods)
++            {
++                if (session.RequiredMods.Count == 0)
++                {
++                    GUILayout.Label("  None reported", _dimLabelStyle);
++                }
++                else
++                {
++                    int count = Mathf.Min(6, session.RequiredMods.Count);
++                    for (int i = 0; i < count; i++)
++                    {
++                        var mod = session.RequiredMods[i];
++                        string workshop = string.IsNullOrEmpty(mod.WorkshopId) ? "" : $" ({mod.WorkshopId})";
++                        GUILayout.Label($"  - {ShortText(mod.Name + workshop, 32)}", _dimLabelStyle);
++                    }
++                    if (session.RequiredMods.Count > count)
++                        GUILayout.Label($"  +{session.RequiredMods.Count - count} more", _dimLabelStyle);
++                }
++            }
++        }
++
+         // ── Connection section ────────────────────────────────────────────────
+ 
+         private void DrawConnection()
+@@ -906,4 +1124,4 @@ namespace SeapowerMultiplayer
+             }
+         }
+     }
+-}
+\ No newline at end of file
++}

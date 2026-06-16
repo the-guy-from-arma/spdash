@@ -1,0 +1,32 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: seapower
+      POSTGRES_PASSWORD: seapower
+      POSTGRES_DB: seapower_registry
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: 8080
+      DATABASE_URL: postgres://seapower:seapower@db:5432/seapower_registry
+      ADMIN_TOKEN: change-me-local-admin-token
+      PUBLIC_BASE_URL: http://localhost:8080
+      SERVER_TTL_SECONDS: 300
+      ALLOW_PENDING_SERVERS: "true"
+      LAUNCHER_VERSION: 0.1.0
+      LAUNCHER_DOWNLOAD_URL: http://localhost:8080/download-not-configured
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+volumes:
+  pgdata:
+

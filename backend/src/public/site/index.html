@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sea Power Multiplayer</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="masthead">
+      <nav>
+        <span class="brand">Sea Power Multiplayer</span>
+        <a href="/admin/">Owner Dashboard</a>
+      </nav>
+      <div class="hero">
+        <h1>Find A Fleet. Join The Fight.</h1>
+        <p>Browse active public Sea Power multiplayer hosts, download the desktop app, and connect through the existing in-game multiplayer mod.</p>
+        <div class="actions">
+          <a class="primary" href="/download">Download Desktop App</a>
+          <button id="refreshServers" type="button">Refresh Servers</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="notice">
+        <strong>How connect works:</strong>
+        The website opens the installed desktop app with a secure handoff. The desktop app verifies the server with Railway, checks your mod/scenario requirements, writes the Sea Power config, then launches the game.
+      </section>
+
+      <section class="servers">
+        <div class="section-title">
+          <h2>Public Servers</h2>
+          <span id="serverCount">Loading...</span>
+        </div>
+        <div id="serversList" class="server-list"></div>
+      </section>
+    </main>
+
+    <script src="/site.js"></script>
+  </body>
+</html>
+

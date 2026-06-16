@@ -1,0 +1,18 @@
+{
+  "name": "seapower-mp-registry",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/db.js && node --check src/validation.js && node --check src/auth.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
+
