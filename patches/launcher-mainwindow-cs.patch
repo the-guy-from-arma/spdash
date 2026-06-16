@@ -1,0 +1,641 @@
+diff --git a/MainWindow.xaml.cs b/MainWindow.xaml.cs
+index aa7573f..7a4bfed 100644
+--- a/MainWindow.xaml.cs
++++ b/MainWindow.xaml.cs
+@@ -1,6 +1,7 @@
+ using System;
+ using System.Diagnostics;
+ using System.Linq;
++using System.Threading;
+ using System.Threading.Tasks;
+ using System.Windows;
+ using SeapowerMultiplayer.Launcher.Services;
+@@ -9,24 +10,40 @@ namespace SeapowerMultiplayer.Launcher
+ {
+     public partial class MainWindow : Window
+     {
++        private const string CurrentVersion = LauncherVersions.LauncherVersion;
++
+         private readonly ConfigManager _config = new();
++        private readonly RegistryService _registry = new();
+         private bool _gameRunning;
+         private UpdateInfo? _pendingUpdate;
+         private string _lastIP = "0.0.0.0";
++        private RegistryServer? _selectedServer;
++        private string? _activeHostServerId;
++        private CancellationTokenSource? _heartbeatCts;
++        private Task? _heartbeatTask;
+ 
+         public MainWindow()
+         {
+             InitializeComponent();
+             TxtVersion.Text = $"v{CurrentVersion}";
+             Loaded += OnLoaded;
++            Closed += (_, _) => _ = StopHostListingAsync();
+         }
+ 
+-        private void OnLoaded(object sender, RoutedEventArgs e)
++        private async void OnLoaded(object sender, RoutedEventArgs e)
+         {
+             _config.Load();
+             ApplyConfigToUI();
+ 
+-            // Auto-detect game path if not saved
++            try
++            {
++                ProtocolRegistrar.Register();
++            }
++            catch (Exception ex)
++            {
++                TxtStatus.Text = $"Protocol registration skipped: {ex.Message}";
++            }
++
+             if (string.IsNullOrEmpty(_config.Settings.GameDirectory) ||
+                 !GameDetector.IsValidGameDir(_config.Settings.GameDirectory))
+             {
+@@ -40,19 +57,50 @@ namespace SeapowerMultiplayer.Launcher
+ 
+             TxtGamePath.Text = _config.Settings.GameDirectory ?? "";
+ 
+-            // Clean up any proxy files left from a crash
+             if (!string.IsNullOrEmpty(_config.Settings.GameDirectory))
+                 GameLauncher.CleanupProxy(_config.Settings.GameDirectory);
+ 
+             UpdateInstallStatus();
+ 
+-            // After a self-update, automatically reinstall the mod DLLs
+-            // so the game gets the new plugin without a manual "Repair" click.
+             if (Environment.GetCommandLineArgs().Contains("--post-update"))
+                 _ = PostUpdateRepairAsync();
+ 
+-            // Check for updates in the background (don't block startup)
+             _ = CheckForUpdateAsync();
++            await RefreshServersAsync(false);
++            await HandleProtocolLaunchAsync();
++        }
++
++        private async Task HandleProtocolLaunchAsync()
++        {
++            foreach (var arg in Environment.GetCommandLineArgs())
++            {
++                var request = ProtocolConnectRequest.TryParse(arg);
++                if (request == null) continue;
++
++                if (!string.IsNullOrWhiteSpace(request.RegistryUrl))
++                    TxtRegistryUrl.Text = request.RegistryUrl;
++
++                SaveUIToConfig();
++                TxtStatus.Text = "Opening server from browser link...";
++
++                try
++                {
++                    var server = await _registry.GetServerAsync(_config.Settings.RegistryUrl, request.ServerId);
++                    if (server == null)
++                    {
++                        TxtStatus.Text = "Server is not active or has not been verified.";
++                        return;
++                    }
++
++                    await ConnectToServerAsync(server);
++                }
++                catch (Exception ex)
++                {
++                    TxtStatus.Text = $"Browser connect failed: {ex.Message}";
++                }
++
++                return;
++            }
+         }
+ 
+         private async Task PostUpdateRepairAsync()
+@@ -65,7 +113,7 @@ namespace SeapowerMultiplayer.Launcher
+             try
+             {
+                 await Installer.RepairAsync(gameDir, progress);
+-                TxtStatus.Text = "Update applied — mod reinstalled!";
++                TxtStatus.Text = "Update applied - mod reinstalled!";
+                 UpdateInstallStatus();
+             }
+             catch (Exception ex)
+@@ -120,6 +168,16 @@ namespace SeapowerMultiplayer.Launcher
+             TxtMissileHz.Text = _config.Settings.MissileStateHz.ToString();
+             TxtUnitHz.Text = _config.Settings.UnitStateHz.ToString();
+             TxtHostIP.IsEnabled = !_config.Settings.IsHost;
++
++            TxtRegistryUrl.Text = _config.Settings.RegistryUrl;
++            TxtServerName.Text = _config.Settings.ServerName;
++            TxtPublicIp.Text = _config.Settings.PublicIp;
++            TxtScenarioName.Text = _config.Settings.ScenarioName;
++            TxtScenarioHash.Text = _config.Settings.ScenarioHash;
++            TxtRequiredMods.Text = _config.Settings.RequiredModsRaw;
++            TxtRegion.Text = _config.Settings.Region;
++            TxtPlayerCount.Text = _config.Settings.PlayerCount.ToString();
++            TxtMaxPlayers.Text = _config.Settings.MaxPlayers.ToString();
+         }
+ 
+         private void SaveUIToConfig()
+@@ -136,9 +194,28 @@ namespace SeapowerMultiplayer.Launcher
+                 _config.Settings.MissileStateHz = Math.Clamp(missileHz, 1, 60);
+             if (int.TryParse(TxtUnitHz.Text.Trim(), out int unitHz))
+                 _config.Settings.UnitStateHz = Math.Clamp(unitHz, 1, 60);
++
++            _config.Settings.RegistryUrl = RegistryService.NormalizeBaseUrl(TxtRegistryUrl.Text);
++            _config.Settings.ServerName = string.IsNullOrWhiteSpace(TxtServerName.Text)
++                ? "Sea Power Fleet"
++                : TxtServerName.Text.Trim();
++            _config.Settings.PublicIp = TxtPublicIp.Text.Trim();
++            _config.Settings.ScenarioName = TxtScenarioName.Text.Trim();
++            _config.Settings.ScenarioHash = TxtScenarioHash.Text.Trim();
++            _config.Settings.RequiredModsRaw = TxtRequiredMods.Text.Trim();
++            _config.Settings.Region = TxtRegion.Text.Trim();
++            _config.Settings.PlayerCount = ReadInt(TxtPlayerCount.Text, 1, 0, 32);
++            _config.Settings.MaxPlayers = ReadInt(TxtMaxPlayers.Text, 4, 1, 32);
+             _config.Save();
+         }
+ 
++        private static int ReadInt(string value, int fallback, int min, int max)
++        {
++            return int.TryParse(value.Trim(), out var parsed)
++                ? Math.Clamp(parsed, min, max)
++                : fallback;
++        }
++
+         private void UpdateInstallStatus()
+         {
+             var gameDir = TxtGamePath.Text;
+@@ -148,6 +225,7 @@ namespace SeapowerMultiplayer.Launcher
+                 TxtInstallStatus.Text = "Game not found";
+                 BtnInstall.IsEnabled = false;
+                 BtnLaunch.IsEnabled = false;
++                BtnHostPublic.IsEnabled = false;
+                 return;
+             }
+ 
+@@ -163,14 +241,15 @@ namespace SeapowerMultiplayer.Launcher
+                 TxtInstallStatus.Text = "Installed";
+                 BtnInstall.Content = "Repair";
+                 BtnLaunch.IsEnabled = !_gameRunning;
++                BtnHostPublic.IsEnabled = !_gameRunning;
+             }
+             else if (bepinex && !proxy)
+             {
+-                // BepInEx installed but proxy not stashed - needs repair
+                 StatusDot.Fill = FindResource("WarningOrange") as System.Windows.Media.SolidColorBrush;
+                 TxtInstallStatus.Text = "Needs repair (proxy not configured)";
+                 BtnInstall.Content = "Repair";
+                 BtnLaunch.IsEnabled = false;
++                BtnHostPublic.IsEnabled = false;
+             }
+             else
+             {
+@@ -178,6 +257,7 @@ namespace SeapowerMultiplayer.Launcher
+                 TxtInstallStatus.Text = "Not Installed";
+                 BtnInstall.Content = "Install";
+                 BtnLaunch.IsEnabled = false;
++                BtnHostPublic.IsEnabled = false;
+             }
+         }
+ 
+@@ -188,102 +268,67 @@ namespace SeapowerMultiplayer.Launcher
+                 if (RbSteam.IsChecked == true)
+                 {
+                     PnlDirectIP.Visibility = Visibility.Collapsed;
+-                    //This prevents someone from enabling the launch button by flipping between steam and direct networking
+                     if (!ValidInstall())
+-                    {
+                         return;
+-                    }
+                     BtnLaunch.IsEnabled = true;
+                     TxtStatus.Text = "Ready";
+-                   
+                 }
+                 else
+                 {
+-                    //This prevents someone from enabling the launch button by flipping between steam and direct networking. Then checks the network settings to highlight the boxes
+                     PnlDirectIP.Visibility = Visibility.Visible;
+                     if (!ValidInstall())
+                         return;
+                     ValidateNetworkSettings();
+                 }
+             }
+-
+         }
+ 
+         private void Role_Changed(object sender, RoutedEventArgs e)
+         {
+             if (TxtHostIP != null)
+             {
+-                //If the user has changed the IP, and the new one is valid. Remember it if they flip back over to client mode
+                 if (TxtHostIP.Text != "0.0.0.0" && IsValidIP(TxtHostIP.Text))
+-                {
+                     _lastIP = TxtHostIP.Text;
+-                }
+ 
+                 TxtHostIP.IsEnabled = RbClient.IsChecked == true;
+-
+-                //Set the host IP box to show 0.0.0.0 when it's reselected
+-                if (RbHost.IsChecked == true)
+-                {
+-                    TxtHostIP.Text = "0.0.0.0";
+-                }
+-                else
+-                {
+-                    TxtHostIP.Text = _lastIP;
+-                }
++                TxtHostIP.Text = RbHost.IsChecked == true ? "0.0.0.0" : _lastIP;
+             }
+             ValidateNetworkSettings();
+-
+         }
+-        private bool IsValidIP(string IP)
++
++        private bool IsValidIP(string ip)
+         {
+-            //Just return true if it's set to all IPs still
+-            if (IP == "0.0.0.0") return true;
+-            //Check if .Net thinks it's a valid IP and it has all 4 octets like it should
+-            if(System.Net.IPAddress.TryParse(IP, out var Address))
+-            {
+-                return IP.Count(c => c == '.') == 3;
+-            }
+-            return false;
++            if (ip == "0.0.0.0") return true;
++            return System.Net.IPAddress.TryParse(ip, out _) && ip.Count(c => c == '.') == 3;
+         }
+-        //Make sure someone doesn't enter something ridiculous for the port
+-        private bool IsValidPort(string EnteredPort)
++
++        private bool IsValidPort(string enteredPort)
+         {
+-            if (int.TryParse(EnteredPort, out var Port))
+-            {
+-                //Ports must be between this range. Really users shouldn't use anything below 1024
+-                return Port >= 1 && Port <= 65535;
+-            }
++            if (int.TryParse(enteredPort, out var port))
++                return port is >= 1 and <= 65535;
+             return false;
+         }
+-        //Update the boarder of the host IP box to indicate that something is invalid to the user
++
+         private void TxtHostIP_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+         {
+-            if (string.IsNullOrEmpty(TxtHostIP.Text) || !IsValidIP(TxtHostIP.Text))
+-            {
+-                TxtHostIP.BorderBrush = System.Windows.Media.Brushes.Red;
+-            }
+-            else
+-            {
+-                TxtHostIP.BorderBrush = System.Windows.Media.Brushes.Green;
+-            }
++            TxtHostIP.BorderBrush = string.IsNullOrEmpty(TxtHostIP.Text) || !IsValidIP(TxtHostIP.Text)
++                ? System.Windows.Media.Brushes.Red
++                : System.Windows.Media.Brushes.Green;
+             ValidateNetworkSettings();
+         }
+-        //Update the boarder of the Port box to indicate that something is invalid to the user
++
+         private void TxtPort_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+         {
+-            if (!IsValidPort(TxtPort.Text))
+-            {
+-                TxtPort.BorderBrush = System.Windows.Media.Brushes.Red;
+-            }
+-            else
+-            {
+-                TxtPort.BorderBrush = System.Windows.Media.Brushes.Green;
+-            }
++            TxtPort.BorderBrush = !IsValidPort(TxtPort.Text)
++                ? System.Windows.Media.Brushes.Red
++                : System.Windows.Media.Brushes.Green;
+             ValidateNetworkSettings();
+         }
++
+         private void ValidateNetworkSettings()
+         {
+-            if (BtnLaunch == null)
++            if (BtnLaunch == null || TxtHostIP == null || TxtPort == null ||
++                TxtMissileHz == null || TxtUnitHz == null || TxtStatus == null)
+                 return;
+             if (IsValidIP(TxtHostIP.Text) && IsValidPort(TxtPort.Text)
+                 && IsValidHz(TxtMissileHz.Text) && IsValidHz(TxtUnitHz.Text))
+@@ -298,13 +343,11 @@ namespace SeapowerMultiplayer.Launcher
+             }
+         }
+ 
+-        //State sync rates must be a whole number between 1 and 60
+         private bool IsValidHz(string entered)
+         {
+-            return int.TryParse(entered.Trim(), out var hz) && hz >= 1 && hz <= 60;
++            return int.TryParse(entered.Trim(), out var hz) && hz is >= 1 and <= 60;
+         }
+ 
+-        //Update the border of the Hz boxes to indicate that something is invalid to the user
+         private void TxtHz_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+         {
+             if (sender is System.Windows.Controls.TextBox box)
+@@ -315,7 +358,7 @@ namespace SeapowerMultiplayer.Launcher
+             }
+             ValidateNetworkSettings();
+         }
+-        //Checks to make sure everything needed for the mod is where it should be
++
+         private bool ValidInstall()
+         {
+             var gameDir = TxtGamePath.Text;
+@@ -367,8 +410,7 @@ namespace SeapowerMultiplayer.Launcher
+             if (string.IsNullOrEmpty(gameDir)) return;
+ 
+             SetControlsEnabled(false);
+-            var progress = new Progress<string>(msg =>
+-                TxtStatus.Text = msg);
++            var progress = new Progress<string>(msg => TxtStatus.Text = msg);
+ 
+             try
+             {
+@@ -395,17 +437,228 @@ namespace SeapowerMultiplayer.Launcher
+             }
+         }
+ 
+-        private const string CurrentVersion = "0.3.0";
+-
+         private async void BtnLaunch_Click(object sender, RoutedEventArgs e)
+         {
+-            //Don't let the game launch with an invalid mod install
++            await LaunchGameAsync(null);
++        }
++
++        private async void BtnRefreshServers_Click(object sender, RoutedEventArgs e)
++        {
++            await RefreshServersAsync(true);
++        }
++
++        private async Task RefreshServersAsync(bool userRequested)
++        {
++            SaveUIToConfig();
++            BtnRefreshServers.IsEnabled = false;
++            try
++            {
++                TxtStatus.Text = "Fetching public servers...";
++                var servers = await _registry.GetServersAsync(_config.Settings.RegistryUrl);
++                LstServers.ItemsSource = servers;
++                TxtStatus.Text = servers.Count == 1
++                    ? "1 public server found."
++                    : $"{servers.Count} public servers found.";
++            }
++            catch (Exception ex)
++            {
++                if (userRequested)
++                    MessageBox.Show(ex.Message, "Registry Error", MessageBoxButton.OK, MessageBoxImage.Warning);
++                TxtStatus.Text = $"Registry unavailable: {ex.Message}";
++            }
++            finally
++            {
++                BtnRefreshServers.IsEnabled = true;
++            }
++        }
++
++        private void LstServers_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
++        {
++            _selectedServer = LstServers.SelectedItem as RegistryServer;
++            BtnConnectSelected.IsEnabled = _selectedServer != null;
++            TxtSelectedServer.Text = _selectedServer == null
++                ? "No server selected."
++                : BuildSelectedServerText(_selectedServer);
++        }
++
++        private static string BuildSelectedServerText(RegistryServer server)
++        {
++            var mods = server.RequiredMods?.Count ?? 0;
++            var endpoint = string.IsNullOrWhiteSpace(server.PublicIp)
++                ? "endpoint pending"
++                : $"{server.PublicIp}:{server.Port}";
++            return $"{server.Name} - {endpoint} - {server.PlayerCount}/{server.MaxPlayers} players - {mods} mods";
++        }
++
++        private async void BtnConnectSelected_Click(object sender, RoutedEventArgs e)
++        {
++            if (_selectedServer == null) return;
++
++            SaveUIToConfig();
++            SetControlsEnabled(false);
++            try
++            {
++                TxtStatus.Text = "Verifying selected server...";
++                var server = await _registry.GetServerAsync(_config.Settings.RegistryUrl, _selectedServer.Id);
++                if (server == null)
++                {
++                    TxtStatus.Text = "Server is not active or has not been verified.";
++                    return;
++                }
++
++                await ConnectToServerAsync(server);
++            }
++            catch (Exception ex)
++            {
++                TxtStatus.Text = $"Connect failed: {ex.Message}";
++                MessageBox.Show(ex.Message, "Connect Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
++            }
++            finally
++            {
++                if (!_gameRunning)
++                    SetControlsEnabled(true);
++                UpdateInstallStatus();
++            }
++        }
++
++        private async Task ConnectToServerAsync(RegistryServer server)
++        {
++            if (!ValidInstall())
++            {
++                MessageBox.Show("Install or repair the multiplayer mod before connecting.",
++                    "Mod Required", MessageBoxButton.OK, MessageBoxImage.Information);
++                return;
++            }
++
++            bool steam = server.Transport.Equals("Steam", StringComparison.OrdinalIgnoreCase);
++            RbSteam.IsChecked = steam;
++            RbDirectIP.IsChecked = !steam;
++            RbClient.IsChecked = true;
++            TxtHostIP.Text = string.IsNullOrWhiteSpace(server.PublicIp) ? "127.0.0.1" : server.PublicIp;
++            TxtPort.Text = server.Port > 0 ? server.Port.ToString() : "7777";
++            ChkAutoConnect.IsChecked = !steam;
++            ChkPvP.IsChecked = server.Mode.Equals("pvp", StringComparison.OrdinalIgnoreCase);
++            SaveUIToConfig();
++
++            var session = RegistryService.CreateClientSession(_config.Settings.RegistryUrl, server,
++                steam ? "Steam lobby selected" : "Ready");
++
++            if (steam)
++            {
++                MessageBox.Show(
++                    "This registry entry uses Steam transport. The launcher will write the server session and launch Sea Power, but Steam lobby/invite joining still happens inside the mod.",
++                    "Steam Transport",
++                    MessageBoxButton.OK,
++                    MessageBoxImage.Information);
++            }
++
++            await LaunchGameAsync(session);
++        }
++
++        private async void BtnHostPublic_Click(object sender, RoutedEventArgs e)
++        {
++            if (!ValidInstall())
++            {
++                MessageBox.Show("Install or repair the multiplayer mod before hosting.",
++                    "Mod Required", MessageBoxButton.OK, MessageBoxImage.Information);
++                return;
++            }
++
++            RbDirectIP.IsChecked = true;
++            RbHost.IsChecked = true;
++            TxtHostIP.Text = "0.0.0.0";
++            ChkAutoConnect.IsChecked = true;
++            SaveUIToConfig();
++
++            SetControlsEnabled(false);
++            try
++            {
++                TxtStatus.Text = "Publishing server to Railway...";
++                var heartbeat = await _registry.SendHeartbeatAsync(_config.Settings);
++                _activeHostServerId = heartbeat.ServerId;
++                _config.Settings.LastRegistryServerId = heartbeat.ServerId;
++                _config.Save();
++
++                StartHeartbeatLoop();
++
++                var session = RegistryService.CreateHostSession(_config.Settings, heartbeat.ServerId, heartbeat.Status);
++                TxtStatus.Text = heartbeat.Status == "verified"
++                    ? "Server listed. Launching host..."
++                    : "Server published pending owner verification. Launching host...";
++
++                await LaunchGameAsync(session);
++            }
++            catch (Exception ex)
++            {
++                await StopHostListingAsync();
++                TxtStatus.Text = $"Host publish failed: {ex.Message}";
++                MessageBox.Show(ex.Message, "Host Publish Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
++            }
++            finally
++            {
++                if (!_gameRunning)
++                    SetControlsEnabled(true);
++                UpdateInstallStatus();
++            }
++        }
++
++        private void StartHeartbeatLoop()
++        {
++            _heartbeatCts?.Cancel();
++            _heartbeatCts = new CancellationTokenSource();
++            var token = _heartbeatCts.Token;
++
++            _heartbeatTask = Task.Run(async () =>
++            {
++                while (!token.IsCancellationRequested)
++                {
++                    try
++                    {
++                        await Task.Delay(TimeSpan.FromSeconds(45), token);
++                        if (token.IsCancellationRequested) break;
++                        await _registry.SendHeartbeatAsync(_config.Settings, token);
++                        Dispatcher.Invoke(() => TxtStatus.Text = "Host heartbeat sent.");
++                    }
++                    catch (OperationCanceledException)
++                    {
++                        break;
++                    }
++                    catch (Exception ex)
++                    {
++                        Dispatcher.Invoke(() => TxtStatus.Text = $"Heartbeat failed: {ex.Message}");
++                    }
++                }
++            }, token);
++        }
++
++        private async Task StopHostListingAsync()
++        {
++            _heartbeatCts?.Cancel();
++            _heartbeatCts = null;
++
++            if (string.IsNullOrWhiteSpace(_activeHostServerId))
++                return;
++
++            try
++            {
++                await _registry.StopServerAsync(_config.Settings, _activeHostServerId);
++            }
++            catch
++            {
++                // The registry expires listings by TTL even if stop fails.
++            }
++            finally
++            {
++                _activeHostServerId = null;
++            }
++        }
++
++        private async Task LaunchGameAsync(RegistrySessionInfo? session)
++        {
+             var gameDir = TxtGamePath.Text;
+             if (!ValidInstall())
+                 return;
+-            
+ 
+-            // Show disclaimer once per version
+             if (_config.Settings.AcknowledgedVersion != CurrentVersion)
+             {
+                 var disclaimer = new DisclaimerWindow { Owner = this };
+@@ -421,16 +674,22 @@ namespace SeapowerMultiplayer.Launcher
+             try
+             {
+                 ConfigManager.WriteBepInExConfig(gameDir, _config.Settings);
++                if (session != null)
++                    ConfigManager.WriteRegistrySession(gameDir, session);
++
+                 TxtStatus.Text = "Launching game...";
+                 _gameRunning = true;
+                 BtnLaunch.IsEnabled = false;
++                BtnHostPublic.IsEnabled = false;
+ 
+                 await GameLauncher.LaunchAsync(gameDir, () =>
+                 {
++                    _ = StopHostListingAsync();
+                     Dispatcher.Invoke(() =>
+                     {
+                         _gameRunning = false;
+                         TxtStatus.Text = "Ready";
++                        SetControlsEnabled(true);
+                         UpdateInstallStatus();
+                     });
+                 });
+@@ -440,6 +699,7 @@ namespace SeapowerMultiplayer.Launcher
+             catch (Exception ex)
+             {
+                 _gameRunning = false;
++                await StopHostListingAsync();
+                 TxtStatus.Text = $"Launch error: {ex.Message}";
+                 UpdateInstallStatus();
+             }
+@@ -461,8 +721,18 @@ namespace SeapowerMultiplayer.Launcher
+             ChkPvP.IsEnabled = enabled;
+             TxtMissileHz.IsEnabled = enabled;
+             TxtUnitHz.IsEnabled = enabled;
++            TxtRegistryUrl.IsEnabled = enabled;
++            TxtServerName.IsEnabled = enabled;
++            TxtPublicIp.IsEnabled = enabled;
++            TxtRegion.IsEnabled = enabled;
++            TxtPlayerCount.IsEnabled = enabled;
++            TxtMaxPlayers.IsEnabled = enabled;
++            TxtScenarioName.IsEnabled = enabled;
++            TxtScenarioHash.IsEnabled = enabled;
++            TxtRequiredMods.IsEnabled = enabled;
++            BtnRefreshServers.IsEnabled = enabled;
++            BtnConnectSelected.IsEnabled = enabled && _selectedServer != null;
++            BtnHostPublic.IsEnabled = enabled;
+         }
+-
+-        
+     }
+ }

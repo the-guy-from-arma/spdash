@@ -1,0 +1,496 @@
+using System;
+using System.Collections.Concurrent;
+using BepInEx.Logging;
+using LiteNetLib;
+using LiteNetLib.Utils;
+using SeapowerMultiplayer.Messages;
+using SeapowerMultiplayer.Net2;
+using SeapowerMultiplayer.Transport;
+using UnityEngine;
+
+namespace SeapowerMultiplayer
+{
+    /// <summary>
+    /// Singleton that manages network transport (LiteNetLib or Steam).
+    /// All network callbacks arrive on a background thread; they enqueue Actions
+    /// into _mainThreadQueue which Plugin.Update() drains on the Unity main thread.
+    /// </summary>
+    public class NetworkManager
+    {
+        // ── Singleton ────────────────────────────────────────────────────────────
+        public static readonly NetworkManager Instance = new NetworkManager();
+        private NetworkManager() { }
+
+        // ── State ─────────────────────────────────────────────────────────────────
+        private ITransport? _transport;
+        private bool        _isHost;
+        private bool        _running;
+
+        private readonly ConcurrentQueue<Action> _mainThreadQueue = new();
+        private readonly NetDataWriter           _writer          = new();
+
+        private static ManualLogSource Log => Plugin.Log;
+
+        // ── v2 handshake state ────────────────────────────────────────────────────
+        private HandshakeState _handshake = HandshakeState.Disconnected;
+        private float _handshakeDeadline  = -1f;   // realtimeSinceStartup
+        private float _refuseDisconnectAt = -1f;   // give the refusal Welcome time to flush
+        private const float HandshakeTimeoutSec = 5f;
+
+        public HandshakeState Handshake => _handshake;
+
+        /// <summary>True once the v2 Hello/Welcome handshake completed. All gameplay
+        /// traffic (everything except Hello/Welcome) is gated on this.</summary>
+        public bool IsEstablished => _running && _handshake == HandshakeState.Established;
+
+        /// <summary>Session parameters received in Welcome (client side only).</summary>
+        public WelcomeMessage? SessionParams { get; private set; }
+
+        // ── Public API ────────────────────────────────────────────────────────────
+
+        public int  LastRttMs      => _transport?.RttMs ?? 0;
+
+        public bool IsConnected    => _transport?.IsConnected ?? false;
+
+        public bool LastSendFailed => _transport?.LastSendFailed ?? false;
+
+        public bool IsConnectedClient => !_isHost && IsConnected;
+
+        public bool IsHost => _isHost;
+        public bool IsHostRunning => _running && _isHost;
+
+        public void StartHost(int port)
+        {
+            if (_running) Stop(); // clean restart: never overwrite a live transport
+            _isHost = true;
+            _transport = CreateTransport();
+            WireTransportEvents();
+            _transport.Start(asHost: true);
+            _running = true;
+            Log.LogInfo($"[Net] Hosting (transport={Plugin.Instance.CfgTransport.Value})");
+        }
+
+        public void StartClient(string ip, int port)
+        {
+            if (_running) Stop(); // clean restart: never overwrite a live transport
+            _isHost = false;
+            _transport = CreateTransport();
+            WireTransportEvents();
+            _transport.Start(asHost: false);
+            _running = true;
+            Log.LogInfo($"[Net] Connecting as client (transport={Plugin.Instance.CfgTransport.Value})");
+        }
+
+        /// <summary>Start as host or client for transports that don't need IP/port (Steam).</summary>
+        public void StartTransport(bool asHost)
+        {
+            if (asHost)
+                StartHost(0);
+            else
+                StartClient("", 0);
+        }
+
+        public void Stop()
+        {
+            if (!_running) return;
+            Patch_Vehicle_UpdateAllData_PvP.ClearCache();
+            Patch_ObjectBase_HandleEngageTasks.Reset();
+            _transport?.Stop();
+            _transport = null;
+            _running = false;
+            _handshake = HandshakeState.Disconnected;
+            _handshakeDeadline = -1f;
+            _refuseDisconnectAt = -1f;
+            SessionParams = null;
+            Log.LogInfo("[Net] Stopped.");
+        }
+
+        /// <summary>Called from Plugin.Update() - must run on Unity main thread.</summary>
+        public void Tick()
+        {
+            if (!_running) return;
+
+            _transport?.Poll();
+
+            // Drain queued main-thread actions
+            while (_mainThreadQueue.TryDequeue(out var action))
+                action();
+
+            // Handshake timeout: peer connected but never completed Hello/Welcome -
+            // almost certainly a pre-v2 plugin or an incompatible phase build.
+            if (_handshakeDeadline > 0f && Time.realtimeSinceStartup > _handshakeDeadline
+                && (_handshake == HandshakeState.AwaitingHello || _handshake == HandshakeState.AwaitingWelcome))
+            {
+                Log.LogError(_isHost
+                    ? "[Handshake] No Hello from peer within timeout — peer likely runs an incompatible plugin version. Disconnecting."
+                    : "[Handshake] No Welcome from host within timeout — host likely runs an incompatible plugin version. Disconnecting.");
+                _handshakeDeadline = -1f;
+                _handshake = HandshakeState.Refused;
+                Telemetry.Count("handshake.timeout");
+                _transport?.DisconnectPeers();
+            }
+
+            // Deferred disconnect after sending a refusal Welcome (lets it flush)
+            if (_refuseDisconnectAt > 0f && Time.realtimeSinceStartup > _refuseDisconnectAt)
+            {
+                _refuseDisconnectAt = -1f;
+                _transport?.DisconnectPeers();
+            }
+        }
+
+        // ── Send helpers ──────────────────────────────────────────────────────────
+
+        public void SendToServer(INetMessage msg, DeliveryMethod delivery = DeliveryMethod.ReliableOrdered)
+        {
+            if (_transport == null) return;
+            if (BlockedPreHandshake(msg.Type)) return;
+            _writer.Reset();
+            _writer.Put((byte)msg.Type);
+            msg.Serialize(_writer);
+            _transport.SendToServer(_writer.Data, _writer.Length, MapDelivery(delivery));
+            Telemetry.OnSend((byte)msg.Type, _writer.Length);
+        }
+
+        public void BroadcastToClients(INetMessage msg, DeliveryMethod delivery = DeliveryMethod.ReliableOrdered)
+        {
+            if (_transport == null) return;
+            if (BlockedPreHandshake(msg.Type)) return;
+            _writer.Reset();
+            _writer.Put((byte)msg.Type);
+            msg.Serialize(_writer);
+            _transport.BroadcastToClients(_writer.Data, _writer.Length, MapDelivery(delivery));
+            Telemetry.OnSend((byte)msg.Type, _writer.Length);
+        }
+
+        /// <summary>Everything except Hello/Welcome waits for the handshake.</summary>
+        private bool BlockedPreHandshake(MessageType type)
+        {
+            if (type == MessageType.Hello || type == MessageType.Welcome) return false;
+            if (_handshake == HandshakeState.Established) return false;
+            Telemetry.Count("net.sendBlockedPreHandshake");
+            return true;
+        }
+
+        public void SendToOther(INetMessage msg, DeliveryMethod delivery = DeliveryMethod.ReliableOrdered)
+        {
+            if (_isHost)
+                BroadcastToClients(msg, delivery);
+            else
+                SendToServer(msg, delivery);
+        }
+
+        // ── Transport factory ───────────────────────────────────────────────────
+
+        private ITransport CreateTransport()
+        {
+            if (Plugin.Instance.CfgTransport.Value == "Steam")
+                return new SteamTransport();
+            return new LiteNetTransport();
+        }
+
+        private void WireTransportEvents()
+        {
+            if (_transport == null) return;
+            _transport.OnDataReceived += OnDataReceived;
+            _transport.OnPeerConnected += OnPeerConnected;
+            _transport.OnPeerDisconnected += OnPeerDisconnected;
+        }
+
+        // ── Delivery mapping ────────────────────────────────────────────────────
+
+        private static TransportDelivery MapDelivery(DeliveryMethod dm) => dm switch
+        {
+            DeliveryMethod.Unreliable => TransportDelivery.Unreliable,
+            DeliveryMethod.ReliableSequenced => TransportDelivery.Reliable,
+            DeliveryMethod.ReliableOrdered => TransportDelivery.ReliableOrdered,
+            DeliveryMethod.ReliableUnordered => TransportDelivery.Reliable,
+            _ => TransportDelivery.ReliableOrdered,
+        };
+
+        // ── Transport event handlers ────────────────────────────────────────────
+
+        private void OnPeerConnected()
+        {
+            Log.LogInfo("[Net] Peer connected");
+            _mainThreadQueue.Enqueue(() =>
+            {
+                if (_isHost)
+                {
+                    _handshake = HandshakeState.AwaitingHello;
+                    _handshakeDeadline = Time.realtimeSinceStartup + HandshakeTimeoutSec;
+                    Log.LogInfo("[Handshake] Awaiting client Hello...");
+                }
+                else
+                {
+                    var hello = new HelloMessage
+                    {
+                        ProtocolVersion = ProtocolInfo.ProtocolVersion,
+                        PluginVersion   = PluginInfo.PLUGIN_VERSION,
+                        IsPvP           = Plugin.Instance.CfgPvP.Value,
+                    };
+                    _handshake = HandshakeState.AwaitingWelcome;
+                    _handshakeDeadline = Time.realtimeSinceStartup + HandshakeTimeoutSec;
+                    SendToServer(hello);
+                    Log.LogInfo($"[Handshake] Hello sent (protocol {ProtocolInfo.ProtocolVersion}, pvp={hello.IsPvP}); awaiting Welcome...");
+                }
+            });
+        }
+
+        private void OnPeerDisconnected()
+        {
+            Log.LogInfo("[Net] Peer disconnected");
+            _mainThreadQueue.Enqueue(() =>
+            {
+                _handshake = HandshakeState.Disconnected;
+                _handshakeDeadline = -1f;
+                _refuseDisconnectAt = -1f;
+                SessionParams = null;
+                UnitReplicaDriver.Reset();
+                AircraftReplicaDriver.Reset();
+                DeckPuppetDriver.Reset();
+                CarrierOpsHandler.Reset();
+                SpawnReplicator.Reset();
+                WeaponReplicaDriver.Reset();
+                EntityCensusManager.Reset();
+                Patch_V2_MissionEnd_Capture.Reset();
+                CaptureState.Clear();
+                ReplicaRegistry.Clear();
+                Suppression.EnforceDefenseFlag(); // restores client auto-defence
+                TaskforceAssignmentManager.Reset();
+                UnitLockManager.Reset();
+                StateApplier.ResetOrphanTracking();
+                Patch_Vehicle_UpdateAllData_PvP.ClearCache();
+                Patch_ObjectBase_HandleEngageTasks.Reset();
+                Patch_Compartments_CalculateWantedVelocityInKnots.ClearLogCache();
+                Patch_Vessel_ApplyRudderThrust.ClearLogCache();
+                Patch_VesselPropulsionSystem_OnUpdate.ClearLogCache();
+            });
+        }
+
+        private void OnDataReceived(byte[] data, int length)
+        {
+            var reader = new NetDataReader(data, 0, length);
+            var type = (MessageType)reader.GetByte();
+            Telemetry.OnReceive((byte)type, length);
+
+            // Handshake gate: until Established, only Hello (host) / Welcome (client)
+            // are processed; everything else is dropped.
+            if (_handshake != HandshakeState.Established)
+            {
+                HandlePreHandshake(type, reader);
+                return;
+            }
+
+            if (type != MessageType.PlayerOrder && type != MessageType.DamageState)
+                Log.LogDebug($"[Net] Received {type}");
+
+            switch (type)
+            {
+                case MessageType.EntityStateBatch:
+                {
+                    var msg = EntityStateBatchMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => UnitReplicaDriver.Apply(msg));
+                    break;
+                }
+
+                case MessageType.EntitySpawn:
+                {
+                    var msg = EntitySpawnMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SpawnReplicator.HandleSpawn(msg));
+                    break;
+                }
+
+                case MessageType.EntityDespawn:
+                {
+                    var msg = EntityDespawnMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SpawnReplicator.HandleDespawn(msg));
+                    break;
+                }
+
+                case MessageType.DeckState:
+                {
+                    var msg = DeckStateMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => DeckPuppetDriver.OnDeckState(msg));
+                    break;
+                }
+
+                case MessageType.FlightOpsAnim:
+                {
+                    var msg = FlightOpsAnimMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => CarrierOpsHandler.HandleAnim(msg));
+                    break;
+                }
+
+                case MessageType.ImpactEvent:
+                {
+                    var msg = ImpactEventMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SpawnReplicator.HandleImpact(msg));
+                    break;
+                }
+
+                case MessageType.DestroyEvent:
+                {
+                    var msg = DestroyEventMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SpawnReplicator.HandleDestroyEvent(msg));
+                    break;
+                }
+
+                case MessageType.GunBurstEvent:
+                {
+                    var msg = GunBurstEventMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => CosmeticEventHandler.HandleGunBurst(msg));
+                    break;
+                }
+
+                case MessageType.AmmoStateEvent:
+                {
+                    var msg = AmmoStateEventMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => CosmeticEventHandler.HandleAmmoState(msg));
+                    break;
+                }
+
+                case MessageType.EntityCensus:
+                {
+                    var msg = EntityCensusMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => EntityCensusManager.HandleCensus(msg));
+                    break;
+                }
+
+                case MessageType.CensusDiffRequest:
+                {
+                    var msg = CensusDiffRequestMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => EntityCensusManager.HandleDiffRequest(msg));
+                    break;
+                }
+
+                case MessageType.PlayerOrder:
+                {
+                    var msg = PlayerOrderMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => OrderHandler.Apply(msg));
+                    break;
+                }
+
+                case MessageType.GameEvent:
+                {
+                    var msg = GameEventMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => GameEventHandler.Apply(msg));
+                    break;
+                }
+
+                case MessageType.SessionSync:
+                {
+                    var msg = SessionSyncMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SessionManager.ApplyReceivedSession(msg));
+                    break;
+                }
+
+                case MessageType.SessionReady:
+                {
+                    var msg = SessionReadyMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => SimSyncManager.OnClientReady());
+                    break;
+                }
+
+                case MessageType.DamageState:
+                {
+                    var msg = DamageStateMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => DamageStateSerializer.Apply(msg));
+                    break;
+                }
+
+                case MessageType.DamageDecal:
+                {
+                    var msg = DamageDecalMessage.Deserialize(reader);
+                    _mainThreadQueue.Enqueue(() => CombatEventHandler.RunAsNetworkEvent(
+                        () => DamageStateSerializer.ApplyDecal(msg)));
+                    break;
+                }
+
+                default:
+                    Log.LogWarning($"[Net] Unknown message type: {type}");
+                    break;
+            }
+        }
+
+        // ── v2 handshake ──────────────────────────────────────────────────────────
+
+        private void HandlePreHandshake(MessageType type, NetDataReader reader)
+        {
+            // No synchronous _handshake check here: OnPeerConnected QUEUES the
+            // AwaitingHello/AwaitingWelcome transition, so when the peer's Hello
+            // arrives in the same Poll batch as the connect event (host frame
+            // hitch during boot, localhost RTT) the state still reads
+            // Disconnected and the Hello would be dropped - both sides then sit
+            // out the 5 s timeout. Enqueue the handler instead; FIFO order puts
+            // it after the state transition, and HandleHello/HandleWelcome do
+            // the authoritative state check on the main thread.
+            if (type == MessageType.Hello && _isHost)
+            {
+                var msg = HelloMessage.Deserialize(reader);
+                _mainThreadQueue.Enqueue(() => HandleHello(msg));
+            }
+            else if (type == MessageType.Welcome && !_isHost)
+            {
+                var msg = WelcomeMessage.Deserialize(reader);
+                _mainThreadQueue.Enqueue(() => HandleWelcome(msg));
+            }
+            else
+            {
+                Telemetry.Count("net.droppedPreHandshake");
+                Log.LogDebug($"[Handshake] Dropped {type} (state={_handshake})");
+            }
+        }
+
+        private void HandleHello(HelloMessage msg)
+        {
+            if (_handshake != HandshakeState.AwaitingHello) return;
+
+            string? refusal = null;
+            if (msg.ProtocolVersion != ProtocolInfo.ProtocolVersion)
+                refusal = $"Protocol mismatch: host v{ProtocolInfo.ProtocolVersion}, client v{msg.ProtocolVersion}. Both players need the same mod version.";
+            else if (msg.IsPvP != Plugin.Instance.CfgPvP.Value)
+                refusal = $"Mode mismatch: host is {(Plugin.Instance.CfgPvP.Value ? "PvP" : "co-op")}, client is {(msg.IsPvP ? "PvP" : "co-op")}.";
+
+            if (refusal != null)
+            {
+                Log.LogError($"[Handshake] Refusing client (plugin {msg.PluginVersion}): {refusal}");
+                Telemetry.Count("handshake.refused");
+                BroadcastToClients(new WelcomeMessage { Accepted = false, RefusalReason = refusal });
+                _handshake = HandshakeState.Refused;
+                _handshakeDeadline = -1f;
+                _refuseDisconnectAt = Time.realtimeSinceStartup + 0.75f;
+                return;
+            }
+
+            _handshake = HandshakeState.Established;
+            _handshakeDeadline = -1f;
+            BroadcastToClients(new WelcomeMessage
+            {
+                Accepted      = true,
+                IsPvP         = Plugin.Instance.CfgPvP.Value,
+                ClientUidBase = ProtocolInfo.ClientUidBase,
+                StateRateHz   = 10,
+            });
+            Log.LogInfo($"[Handshake] Client accepted (plugin {msg.PluginVersion}, protocol {msg.ProtocolVersion}). Established.");
+        }
+
+        private void HandleWelcome(WelcomeMessage msg)
+        {
+            if (_handshake != HandshakeState.AwaitingWelcome) return;
+            _handshakeDeadline = -1f;
+
+            if (!msg.Accepted)
+            {
+                Log.LogError($"[Handshake] Host refused connection: {msg.RefusalReason}");
+                Telemetry.Count("handshake.refused");
+                _handshake = HandshakeState.Refused;
+                Stop();
+                return;
+            }
+
+            SessionParams = msg;
+            _handshake = HandshakeState.Established;
+            Log.LogInfo($"[Handshake] Established (pvp={msg.IsPvP}, uidBase={msg.ClientUidBase}, stateRate={msg.StateRateHz}Hz).");
+        }
+    }
+}

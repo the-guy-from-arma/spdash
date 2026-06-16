@@ -1,0 +1,67 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\llkoo\\Desktop\\MP MOD FOR SP\\plugin-src\\SeapowerMultiplayer.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\llkoo\\Desktop\\MP MOD FOR SP\\plugin-src\\SeapowerMultiplayer.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\llkoo\\Desktop\\MP MOD FOR SP\\plugin-src\\SeapowerMultiplayer.csproj",
+        "projectName": "SeapowerMultiplayer",
+        "projectPath": "C:\\Users\\llkoo\\Desktop\\MP MOD FOR SP\\plugin-src\\SeapowerMultiplayer.csproj",
+        "packagesPath": "C:\\Users\\llkoo\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\llkoo\\Desktop\\MP MOD FOR SP\\plugin-src\\obj\\",
+        "projectStyle": "PackageReference",
+        "configFilePaths": [
+          "C:\\Users\\llkoo\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        ],
+        "originalTargetFrameworks": [
+          "net472"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net472": {
+            "targetAlias": "net472",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        }
+      },
+      "frameworks": {
+        "net472": {
+          "targetAlias": "net472",
+          "dependencies": {
+            "LiteNetLib": {
+              "target": "Package",
+              "version": "[1.3.5, )"
+            },
+            "Microsoft.NETFramework.ReferenceAssemblies": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.0.3, )",
+              "autoReferenced": true
+            },
+            "Microsoft.NETFramework.ReferenceAssemblies.net472": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.0.3, )"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.419\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

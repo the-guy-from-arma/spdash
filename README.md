@@ -39,9 +39,9 @@ ADMIN_PASSWORD=<owner dashboard password>
 PUBLIC_BASE_URL=https://your-service.up.railway.app
 SERVER_TTL_SECONDS=300
 ALLOW_PENDING_SERVERS=false
-LAUNCHER_VERSION=0.1.0
+LAUNCHER_VERSION=0.4.1
 LAUNCHER_DOWNLOAD_URL=
-LAUNCHER_SHA256=
+LAUNCHER_SHA256=C0684CCC7A472B42467F0475BBC89993DD0CCD30E3D88DA10AC9CEA9D7A1F006
 ```
 
 Railway will build the Dockerfile in `backend/`.
@@ -57,10 +57,10 @@ backend/src/public/downloads/SeaPowerMultiplayerLauncher.exe
 Current bundled launcher SHA-256:
 
 ```text
-C7A07F11DC05AE84EBC5F58DC3F7D93BD5F5EC729B3C1F784868FC56C80ACCA4
+C0684CCC7A472B42467F0475BBC89993DD0CCD30E3D88DA10AC9CEA9D7A1F006
 ```
 
-This bundled executable is the existing v0.3.0 launcher package. Rebuild and replace it after producing a new launcher build that embeds the patched multiplayer DLL.
+This bundled executable is the registry-connected desktop launcher built from `desktop-launcher/`.
 
 Later, you can move the launcher to GitHub Releases and set `LAUNCHER_DOWNLOAD_URL` to that release asset URL.
 
@@ -103,7 +103,7 @@ Hosts should send enough metadata for clients to verify what they are joining:
   "port": 7777,
   "mode": "pvp",
   "transport": "LiteNetLib",
-  "pluginVersion": "0.3.0",
+  "pluginVersion": "0.4.1",
   "gameVersion": "Sea Power build/version",
   "scenarioName": "Operation Atomic Trident",
   "scenarioHash": "scenario-or-save-hash",

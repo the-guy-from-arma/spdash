@@ -1,0 +1,153 @@
+diff --git a/MainWindow.xaml b/MainWindow.xaml
+index f274baa..862ec7b 100644
+--- a/MainWindow.xaml
++++ b/MainWindow.xaml
+@@ -2,9 +2,9 @@
+         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+         Title="Seapower Multiplayer Launcher"
+-        Width="520" Height="580"
+-        MinWidth="480" MinHeight="540"
+-        ResizeMode="CanMinimize"
++        Width="780" Height="840"
++        MinWidth="680" MinHeight="720"
++        ResizeMode="CanResize"
+         WindowStartupLocation="CenterScreen"
+         Background="{StaticResource PrimaryBg}">
+ 
+@@ -21,8 +21,8 @@
+                 <!-- Separator -->
+                 <RowDefinition Height="Auto"/>
+                 <!-- Network Settings -->
+-                <RowDefinition Height="*"/>
+-                <!-- Spacer -->
++                <RowDefinition Height="Auto"/>
++                <!-- Public Registry -->
+                 <RowDefinition Height="Auto"/>
+                 <!-- Buttons -->
+                 <RowDefinition Height="Auto"/>
+@@ -210,6 +210,124 @@
+                 </StackPanel>
+             </StackPanel>
+ 
++            <!-- Public Registry -->
++            <Border Grid.Row="5"
++                    BorderBrush="{StaticResource BorderColor}"
++                    BorderThickness="1"
++                    CornerRadius="6"
++                    Padding="12"
++                    Margin="0,14,0,0"
++                    Background="{StaticResource SecondaryBg}">
++                <StackPanel>
++                    <DockPanel Margin="0,0,0,8">
++                        <Button x:Name="BtnRefreshServers"
++                                Content="Refresh Servers"
++                                DockPanel.Dock="Right"
++                                Padding="12,6"
++                                Click="BtnRefreshServers_Click"/>
++                        <TextBlock Text="PUBLIC REGISTRY"
++                                   Foreground="{StaticResource TextSecondary}"
++                                   FontSize="11"
++                                   FontWeight="SemiBold"
++                                   VerticalAlignment="Center"/>
++                    </DockPanel>
++
++                    <Label Content="Registry API"/>
++                    <TextBox x:Name="TxtRegistryUrl"
++                             Text="https://spdash-production.up.railway.app"
++                             Margin="0,0,0,8"/>
++
++                    <Grid Margin="0,0,0,8">
++                        <Grid.ColumnDefinitions>
++                            <ColumnDefinition Width="*"/>
++                            <ColumnDefinition Width="12"/>
++                            <ColumnDefinition Width="*"/>
++                        </Grid.ColumnDefinitions>
++
++                        <StackPanel Grid.Column="0">
++                            <Label Content="Public Servers"/>
++                            <ListBox x:Name="LstServers"
++                                     Height="128"
++                                     DisplayMemberPath="DisplayName"
++                                     Background="{StaticResource PrimaryBg}"
++                                     Foreground="{StaticResource TextPrimary}"
++                                     BorderBrush="{StaticResource BorderColor}"
++                                     SelectionChanged="LstServers_SelectionChanged"/>
++                            <TextBlock x:Name="TxtSelectedServer"
++                                       Text="No server selected."
++                                       Foreground="{StaticResource TextSecondary}"
++                                       FontSize="12"
++                                       TextWrapping="Wrap"
++                                       Margin="0,6,0,0"/>
++                            <Button x:Name="BtnConnectSelected"
++                                    Content="Connect Selected Server"
++                                    Padding="12,8"
++                                    Margin="0,8,0,0"
++                                    IsEnabled="False"
++                                    Click="BtnConnectSelected_Click"/>
++                        </StackPanel>
++
++                        <StackPanel Grid.Column="2">
++                            <Label Content="Host Public Server"/>
++                            <TextBox x:Name="TxtServerName"
++                                     Text="Sea Power Fleet"
++                                     Margin="0,0,0,6"/>
++                            <Grid Margin="0,0,0,6">
++                                <Grid.ColumnDefinitions>
++                                    <ColumnDefinition Width="*"/>
++                                    <ColumnDefinition Width="8"/>
++                                    <ColumnDefinition Width="*"/>
++                                </Grid.ColumnDefinitions>
++                                <TextBox x:Name="TxtPublicIp"
++                                         Grid.Column="0"
++                                         ToolTip="Leave blank to let Railway infer the public IP"
++                                         Text=""
++                                         />
++                                <TextBox x:Name="TxtRegion"
++                                         Grid.Column="2"
++                                         ToolTip="Optional region, e.g. US-East"
++                                         Text=""/>
++                            </Grid>
++                            <Grid Margin="0,0,0,6">
++                                <Grid.ColumnDefinitions>
++                                    <ColumnDefinition Width="*"/>
++                                    <ColumnDefinition Width="8"/>
++                                    <ColumnDefinition Width="*"/>
++                                </Grid.ColumnDefinitions>
++                                <TextBox x:Name="TxtPlayerCount"
++                                         Grid.Column="0"
++                                         Text="1"
++                                         ToolTip="Current player count"/>
++                                <TextBox x:Name="TxtMaxPlayers"
++                                         Grid.Column="2"
++                                         Text="4"
++                                         ToolTip="Max players"/>
++                            </Grid>
++                            <TextBox x:Name="TxtScenarioName"
++                                     Text=""
++                                     ToolTip="Scenario name"
++                                     Margin="0,0,0,6"/>
++                            <TextBox x:Name="TxtScenarioHash"
++                                     Text=""
++                                     ToolTip="Scenario or save hash"
++                                     Margin="0,0,0,6"/>
++                            <TextBox x:Name="TxtRequiredMods"
++                                     Text=""
++                                     ToolTip="One required mod per line, or Name|WorkshopId"
++                                     AcceptsReturn="True"
++                                     TextWrapping="Wrap"
++                                     Height="70"
++                                     VerticalScrollBarVisibility="Auto"
++                                     Margin="0,0,0,8"/>
++                            <Button x:Name="BtnHostPublic"
++                                    Content="Host Public Server"
++                                    Padding="12,8"
++                                    Click="BtnHostPublic_Click"/>
++                        </StackPanel>
++                    </Grid>
++                </StackPanel>
++            </Border>
++
+             <!-- Buttons -->
+             <DockPanel Grid.Row="6" Margin="0,12,0,0">
+                 <Button x:Name="BtnLaunch"

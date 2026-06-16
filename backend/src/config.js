@@ -21,9 +21,9 @@ export const config = {
   publicBaseUrl: process.env.PUBLIC_BASE_URL || "",
   serverTtlSeconds: intEnv("SERVER_TTL_SECONDS", 300),
   allowPendingServers: boolEnv("ALLOW_PENDING_SERVERS", false),
-  launcherVersion: process.env.LAUNCHER_VERSION || "0.1.0",
+  launcherVersion: process.env.LAUNCHER_VERSION || "0.4.1",
   launcherDownloadUrl: process.env.LAUNCHER_DOWNLOAD_URL || "",
-  launcherSha256: process.env.LAUNCHER_SHA256 || ""
+  launcherSha256: process.env.LAUNCHER_SHA256 || "C0684CCC7A472B42467F0475BBC89993DD0CCD30E3D88DA10AC9CEA9D7A1F006"
 };
 
 export function requireRuntimeConfig() {

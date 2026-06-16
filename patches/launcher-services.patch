@@ -1,0 +1,422 @@
+diff --git a/Services/ConfigManager.cs b/Services/ConfigManager.cs
+index 68386be..2e4d365 100644
+--- a/Services/ConfigManager.cs
++++ b/Services/ConfigManager.cs
+@@ -1,4 +1,5 @@
+ using System;
++using System.Collections.Generic;
+ using System.IO;
+ using System.Text.Json;
+ 
+@@ -17,6 +18,17 @@ namespace SeapowerMultiplayer.Launcher.Services
+         public int MissileStateHz { get; set; } = 20;
+         public int UnitStateHz { get; set; } = 10;
+         public string? AcknowledgedVersion { get; set; }
++        public string RegistryUrl { get; set; } = "https://spdash-production.up.railway.app";
++        public string HostKey { get; set; } = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
++        public string ServerName { get; set; } = "Sea Power Fleet";
++        public string PublicIp { get; set; } = "";
++        public string ScenarioName { get; set; } = "";
++        public string ScenarioHash { get; set; } = "";
++        public string RequiredModsRaw { get; set; } = "";
++        public string Region { get; set; } = "";
++        public int PlayerCount { get; set; } = 1;
++        public int MaxPlayers { get; set; } = 4;
++        public string? LastRegistryServerId { get; set; }
+     }
+ 
+     public class ConfigManager
+@@ -45,13 +57,27 @@ namespace SeapowerMultiplayer.Launcher.Services
+                     Settings = JsonSerializer.Deserialize<LauncherSettings>(json, JsonOptions)
+                                ?? new LauncherSettings();
+                 }
++                EnsureDefaults();
+             }
+             catch
+             {
+                 Settings = new LauncherSettings();
++                EnsureDefaults();
+             }
+         }
+ 
++        private void EnsureDefaults()
++        {
++            if (string.IsNullOrWhiteSpace(Settings.HostKey) || Settings.HostKey.Length < 24)
++                Settings.HostKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
++            if (string.IsNullOrWhiteSpace(Settings.RegistryUrl))
++                Settings.RegistryUrl = "https://spdash-production.up.railway.app";
++            if (string.IsNullOrWhiteSpace(Settings.ServerName))
++                Settings.ServerName = "Sea Power Fleet";
++            if (Settings.MaxPlayers < 1)
++                Settings.MaxPlayers = 4;
++        }
++
+         public void Save()
+         {
+             Directory.CreateDirectory(ConfigDir);
+@@ -123,5 +149,19 @@ namespace SeapowerMultiplayer.Launcher.Services
+ 
+             File.WriteAllText(configPath, content);
+         }
++
++        public static void WriteRegistrySession(string gameDir, RegistrySessionInfo session)
++        {
++            var configDir = Path.Combine(gameDir, "BepInEx", "config");
++            Directory.CreateDirectory(configDir);
++
++            var configPath = Path.Combine(configDir, "seapower-mp-registry-session.json");
++            var options = new JsonSerializerOptions
++            {
++                WriteIndented = true,
++                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
++            };
++            File.WriteAllText(configPath, JsonSerializer.Serialize(session, options));
++        }
+     }
+ }
+diff --git a/Services/ProtocolRegistrar.cs b/Services/ProtocolRegistrar.cs
+new file mode 100644
+index 0000000..ef1606e
+--- /dev/null
++++ b/Services/ProtocolRegistrar.cs
+@@ -0,0 +1,64 @@
++using System;
++using Microsoft.Win32;
++
++namespace SeapowerMultiplayer.Launcher.Services
++{
++    public static class ProtocolRegistrar
++    {
++        internal const string Scheme = "seapowermp";
++
++        public static void Register()
++        {
++            var exePath = Environment.ProcessPath;
++            if (string.IsNullOrWhiteSpace(exePath)) return;
++
++            using var key = Registry.CurrentUser.CreateSubKey($@"Software\Classes\{Scheme}");
++            key.SetValue("", "URL:Sea Power Multiplayer");
++            key.SetValue("URL Protocol", "");
++
++            using var command = key.CreateSubKey(@"shell\open\command");
++            command.SetValue("", $"\"{exePath}\" \"%1\"");
++        }
++    }
++
++    public sealed class ProtocolConnectRequest
++    {
++        public string ServerId { get; init; } = "";
++        public string RegistryUrl { get; init; } = "";
++
++        public static ProtocolConnectRequest? TryParse(string value)
++        {
++            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)) return null;
++            if (!uri.Scheme.Equals(ProtocolRegistrar.Scheme, StringComparison.OrdinalIgnoreCase)) return null;
++            if (!uri.Host.Equals("connect", StringComparison.OrdinalIgnoreCase)) return null;
++
++            var query = ParseQuery(uri.Query);
++            if (!query.TryGetValue("serverId", out var serverId) || string.IsNullOrWhiteSpace(serverId))
++                return null;
++
++            query.TryGetValue("registry", out var registryUrl);
++            return new ProtocolConnectRequest
++            {
++                ServerId = serverId,
++                RegistryUrl = registryUrl ?? ""
++            };
++        }
++
++        private static System.Collections.Generic.Dictionary<string, string> ParseQuery(string query)
++        {
++            var result = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
++            var trimmed = query.TrimStart('?');
++            if (string.IsNullOrWhiteSpace(trimmed)) return result;
++
++            foreach (var part in trimmed.Split('&', StringSplitOptions.RemoveEmptyEntries))
++            {
++                var pieces = part.Split('=', 2);
++                var key = Uri.UnescapeDataString(pieces[0]);
++                var value = pieces.Length == 2 ? Uri.UnescapeDataString(pieces[1]) : "";
++                result[key] = value;
++            }
++
++            return result;
++        }
++    }
++}
+diff --git a/Services/RegistryService.cs b/Services/RegistryService.cs
+new file mode 100644
+index 0000000..3116675
+--- /dev/null
++++ b/Services/RegistryService.cs
+@@ -0,0 +1,270 @@
++using System;
++using System.Collections.Generic;
++using System.Linq;
++using System.Net.Http;
++using System.Net.Http.Json;
++using System.Text.Json;
++using System.Text.Json.Serialization;
++using System.Threading;
++using System.Threading.Tasks;
++
++namespace SeapowerMultiplayer.Launcher.Services
++{
++    public sealed class RegistryService
++    {
++        private static readonly JsonSerializerOptions JsonOptions = new()
++        {
++            PropertyNameCaseInsensitive = true,
++            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
++            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
++        };
++
++        private static readonly HttpClient Http = new()
++        {
++            Timeout = TimeSpan.FromSeconds(12),
++            DefaultRequestHeaders =
++            {
++                { "User-Agent", "SeapowerMultiplayerLauncher" }
++            }
++        };
++
++        public async Task<IReadOnlyList<RegistryServer>> GetServersAsync(string registryUrl, CancellationToken cancellationToken = default)
++        {
++            var response = await Http.GetFromJsonAsync<RegistryServerListResponse>(
++                $"{NormalizeBaseUrl(registryUrl)}/api/servers", JsonOptions, cancellationToken);
++            return response?.Servers ?? new List<RegistryServer>();
++        }
++
++        public async Task<RegistryServer?> GetServerAsync(string registryUrl, string serverId, CancellationToken cancellationToken = default)
++        {
++            var response = await Http.GetFromJsonAsync<RegistryServerDetailResponse>(
++                $"{NormalizeBaseUrl(registryUrl)}/api/servers/{Uri.EscapeDataString(serverId)}",
++                JsonOptions,
++                cancellationToken);
++            return response?.Server;
++        }
++
++        public async Task<RegistryHeartbeatResponse> SendHeartbeatAsync(LauncherSettings settings, CancellationToken cancellationToken = default)
++        {
++            var payload = BuildHeartbeatPayload(settings);
++            using var response = await Http.PostAsJsonAsync(
++                $"{NormalizeBaseUrl(settings.RegistryUrl)}/api/servers/heartbeat",
++                payload,
++                JsonOptions,
++                cancellationToken);
++
++            response.EnsureSuccessStatusCode();
++            return await response.Content.ReadFromJsonAsync<RegistryHeartbeatResponse>(JsonOptions, cancellationToken)
++                   ?? new RegistryHeartbeatResponse();
++        }
++
++        public async Task StopServerAsync(LauncherSettings settings, string serverId, CancellationToken cancellationToken = default)
++        {
++            var payload = BuildHeartbeatPayload(settings);
++            using var response = await Http.PostAsJsonAsync(
++                $"{NormalizeBaseUrl(settings.RegistryUrl)}/api/servers/{Uri.EscapeDataString(serverId)}/stop",
++                payload,
++                JsonOptions,
++                cancellationToken);
++            response.EnsureSuccessStatusCode();
++        }
++
++        public static string NormalizeBaseUrl(string registryUrl)
++        {
++            var value = string.IsNullOrWhiteSpace(registryUrl)
++                ? "https://spdash-production.up.railway.app"
++                : registryUrl.Trim();
++            return value.TrimEnd('/');
++        }
++
++        public static List<RegistryModInfo> ParseRequiredMods(string raw)
++        {
++            if (string.IsNullOrWhiteSpace(raw)) return new List<RegistryModInfo>();
++
++            return raw
++                .Split(new[] { '\r', '\n', ';' }, StringSplitOptions.RemoveEmptyEntries)
++                .Select(ParseRequiredMod)
++                .Where(mod => !string.IsNullOrWhiteSpace(mod.Name) || !string.IsNullOrWhiteSpace(mod.WorkshopId))
++                .Take(80)
++                .ToList();
++        }
++
++        private static RegistryModInfo ParseRequiredMod(string line)
++        {
++            var value = line.Trim();
++            var parts = value.Split('|', 2, StringSplitOptions.TrimEntries);
++            if (parts.Length == 2)
++            {
++                return new RegistryModInfo
++                {
++                    Name = parts[0],
++                    WorkshopId = parts[1],
++                    Required = true
++                };
++            }
++
++            return new RegistryModInfo
++            {
++                Name = value,
++                Required = true
++            };
++        }
++
++        public static RegistrySessionInfo CreateClientSession(string registryUrl, RegistryServer server, string launcherStatus)
++        {
++            return new RegistrySessionInfo
++            {
++                RegistryUrl = NormalizeBaseUrl(registryUrl),
++                ServerId = server.Id,
++                ServerName = server.Name,
++                LauncherStatus = launcherStatus,
++                VerificationStatus = server.Status,
++                Visibility = server.Visibility,
++                Mode = server.Mode,
++                Transport = server.Transport,
++                PublicIp = server.PublicIp,
++                Port = server.Port,
++                PluginVersion = server.PluginVersion,
++                GameVersion = server.GameVersion,
++                ScenarioName = server.ScenarioName,
++                ScenarioHash = server.ScenarioHash,
++                IsPublicListed = server.Visibility == "public",
++                RequiredMods = server.RequiredMods ?? new List<RegistryModInfo>(),
++                MissingMods = new List<string>()
++            };
++        }
++
++        public static RegistrySessionInfo CreateHostSession(LauncherSettings settings, string serverId, string status)
++        {
++            return new RegistrySessionInfo
++            {
++                RegistryUrl = NormalizeBaseUrl(settings.RegistryUrl),
++                ServerId = serverId,
++                ServerName = settings.ServerName,
++                LauncherStatus = "Hosting",
++                VerificationStatus = status,
++                Visibility = "public",
++                Mode = settings.PvP ? "pvp" : "coop",
++                Transport = settings.Transport,
++                PublicIp = settings.PublicIp,
++                Port = settings.Port,
++                PluginVersion = LauncherVersions.PluginVersion,
++                GameVersion = "unknown",
++                ScenarioName = settings.ScenarioName,
++                ScenarioHash = settings.ScenarioHash,
++                IsPublicListed = true,
++                RequiredMods = ParseRequiredMods(settings.RequiredModsRaw),
++                MissingMods = new List<string>()
++            };
++        }
++
++        private static object BuildHeartbeatPayload(LauncherSettings settings)
++        {
++            return new
++            {
++                hostKey = settings.HostKey,
++                name = string.IsNullOrWhiteSpace(settings.ServerName) ? "Sea Power Fleet" : settings.ServerName.Trim(),
++                publicIp = settings.PublicIp?.Trim() ?? "",
++                port = settings.Port,
++                mode = settings.PvP ? "pvp" : "coop",
++                transport = settings.Transport == "Steam" ? "Steam" : "LiteNetLib",
++                pluginVersion = LauncherVersions.PluginVersion,
++                gameVersion = "unknown",
++                scenarioName = settings.ScenarioName?.Trim() ?? "",
++                scenarioHash = settings.ScenarioHash?.Trim() ?? "",
++                requiredMods = ParseRequiredMods(settings.RequiredModsRaw),
++                visibility = "public",
++                region = settings.Region?.Trim() ?? "",
++                playerCount = Math.Clamp(settings.PlayerCount, 0, 32),
++                maxPlayers = Math.Clamp(settings.MaxPlayers, 1, 32)
++            };
++        }
++    }
++
++    public static class LauncherVersions
++    {
++        public const string LauncherVersion = "0.4.0";
++        public const string PluginVersion = "0.3.0";
++    }
++
++    public sealed class RegistryServerListResponse
++    {
++        public int TtlSeconds { get; set; }
++        public List<RegistryServer> Servers { get; set; } = new();
++    }
++
++    public sealed class RegistryServerDetailResponse
++    {
++        public RegistryServer? Server { get; set; }
++    }
++
++    public sealed class RegistryHeartbeatResponse
++    {
++        public bool Ok { get; set; }
++        public string ServerId { get; set; } = "";
++        public string Status { get; set; } = "";
++        public DateTimeOffset? LastSeen { get; set; }
++    }
++
++    public sealed class RegistryServer
++    {
++        public string Id { get; set; } = "";
++        public string Name { get; set; } = "";
++        public string Visibility { get; set; } = "";
++        public string Mode { get; set; } = "";
++        public string Transport { get; set; } = "";
++        public string PublicIp { get; set; } = "";
++        public int Port { get; set; }
++        public string PluginVersion { get; set; } = "";
++        public string GameVersion { get; set; } = "";
++        public string ScenarioName { get; set; } = "";
++        public string ScenarioHash { get; set; } = "";
++        public List<RegistryModInfo>? RequiredMods { get; set; }
++        public string Region { get; set; } = "";
++        public int PlayerCount { get; set; }
++        public int MaxPlayers { get; set; }
++        public string Status { get; set; } = "";
++        public DateTimeOffset? LastSeen { get; set; }
++
++        [JsonIgnore]
++        public string DisplayName
++        {
++            get
++            {
++                var players = MaxPlayers > 0 ? $"{PlayerCount}/{MaxPlayers}" : $"{PlayerCount}/?";
++                var scenario = string.IsNullOrWhiteSpace(ScenarioName) ? "No scenario" : ScenarioName;
++                return $"{Name}  |  {players}  |  {Mode}/{Transport}  |  {scenario}";
++            }
++        }
++    }
++
++    public sealed class RegistryModInfo
++    {
++        public string Name { get; set; } = "";
++        public string? WorkshopId { get; set; }
++        public bool Required { get; set; } = true;
++        public string? Version { get; set; }
++        public string? Hash { get; set; }
++    }
++
++    public sealed class RegistrySessionInfo
++    {
++        public string RegistryUrl { get; set; } = "";
++        public string ServerId { get; set; } = "";
++        public string ServerName { get; set; } = "";
++        public string LauncherStatus { get; set; } = "";
++        public string VerificationStatus { get; set; } = "";
++        public string Visibility { get; set; } = "";
++        public string Mode { get; set; } = "";
++        public string Transport { get; set; } = "";
++        public string PublicIp { get; set; } = "";
++        public int Port { get; set; }
++        public string PluginVersion { get; set; } = "";
++        public string GameVersion { get; set; } = "";
++        public string ScenarioName { get; set; } = "";
++        public string ScenarioHash { get; set; } = "";
++        public bool IsPublicListed { get; set; }
++        public List<RegistryModInfo> RequiredMods { get; set; } = new();
++        public List<string> MissingMods { get; set; } = new();
++    }
++}
