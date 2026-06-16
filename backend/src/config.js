@@ -16,6 +16,8 @@ export const config = {
   databaseUrl: process.env.DATABASE_URL,
   databaseSsl: boolEnv("DATABASE_SSL", false),
   adminToken: process.env.ADMIN_TOKEN || "",
+  adminUsername: process.env.ADMIN_USERNAME || "owner",
+  adminPassword: process.env.ADMIN_PASSWORD || "",
   publicBaseUrl: process.env.PUBLIC_BASE_URL || "",
   serverTtlSeconds: intEnv("SERVER_TTL_SECONDS", 300),
   allowPendingServers: boolEnv("ALLOW_PENDING_SERVERS", false),
@@ -32,4 +34,3 @@ export function requireRuntimeConfig() {
     throw new Error(`Missing required environment variables: ${missing.join(", ")}`);
   }
 }
-

@@ -1,30 +1,111 @@
-const tokenInput = document.querySelector("#adminToken");
-const saveTokenButton = document.querySelector("#saveToken");
+const sessionLabel = document.querySelector("#sessionLabel");
+const logoutButton = document.querySelector("#logout");
 const refreshButton = document.querySelector("#refresh");
 const serversBody = document.querySelector("#serversBody");
 const filterInput = document.querySelector("#filter");
 const statusFilter = document.querySelector("#statusFilter");
+const loginPanel = document.querySelector("#loginPanel");
+const dashboardPanel = document.querySelector("#dashboardPanel");
+const loginForm = document.querySelector("#loginForm");
+const usernameInput = document.querySelector("#username");
+const passwordInput = document.querySelector("#password");
+const loginMessage = document.querySelector("#loginMessage");
 
 let servers = [];
+let authenticated = false;
 
-tokenInput.value = localStorage.getItem("spmpAdminToken") || "";
-
-saveTokenButton.addEventListener("click", () => {
-  localStorage.setItem("spmpAdminToken", tokenInput.value.trim());
-  loadServers();
-});
-
+loginForm.addEventListener("submit", login);
+logoutButton.addEventListener("click", logout);
 refreshButton.addEventListener("click", loadServers);
 filterInput.addEventListener("input", render);
 statusFilter.addEventListener("change", render);
 
+checkSession();
+
+async function checkSession() {
+  try {
+    const response = await fetch("/api/admin/session", {
+      credentials: "same-origin",
+      headers: { Accept: "application/json" }
+    });
+    const data = await response.json();
+    authenticated = Boolean(data.authenticated);
+    usernameInput.value = data.username || "owner";
+
+    if (!data.loginConfigured) {
+      loginMessage.textContent = "Owner password is not configured. Set ADMIN_PASSWORD on the Railway web service.";
+    }
+
+    setAuthState(authenticated, data.username || "owner");
+    if (authenticated) await loadServers();
+  } catch (error) {
+    loginMessage.textContent = cleanError(error.message);
+    setAuthState(false, "owner");
+  }
+}
+
+async function login(event) {
+  event.preventDefault();
+  loginMessage.textContent = "Signing in...";
+
+  try {
+    const response = await fetch("/api/admin/login", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+      },
+      body: JSON.stringify({
+        username: usernameInput.value.trim(),
+        password: passwordInput.value
+      })
+    });
+
+    if (!response.ok) throw new Error(await response.text());
+    const data = await response.json();
+    passwordInput.value = "";
+    loginMessage.textContent = "";
+    authenticated = true;
+    setAuthState(true, data.username || usernameInput.value.trim() || "owner");
+    await loadServers();
+  } catch (error) {
+    authenticated = false;
+    setAuthState(false, usernameInput.value.trim() || "owner");
+    loginMessage.textContent = cleanError(error.message);
+  }
+}
+
+async function logout() {
+  await fetch("/api/admin/logout", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { Accept: "application/json" }
+  });
+  authenticated = false;
+  servers = [];
+  setAuthState(false, usernameInput.value.trim() || "owner");
+  renderSummary();
+}
+
+function setAuthState(isAuthenticated, username) {
+  loginPanel.classList.toggle("hidden", isAuthenticated);
+  dashboardPanel.classList.toggle("hidden", !isAuthenticated);
+  logoutButton.classList.toggle("hidden", !isAuthenticated);
+  refreshButton.disabled = !isAuthenticated;
+  sessionLabel.textContent = isAuthenticated ? `Signed in as ${username}` : "Signed out";
+  if (!isAuthenticated) {
+    serversBody.innerHTML = `<tr><td colspan="9" class="empty">Sign in with the owner account.</td></tr>`;
+  }
+}
+
 async function api(path, options = {}) {
-  const token = tokenInput.value.trim();
   const response = await fetch(path, {
     ...options,
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
+      Accept: "application/json",
       ...(options.headers || {})
     }
   });
@@ -39,13 +120,15 @@ async function api(path, options = {}) {
 }
 
 async function loadServers() {
+  if (!authenticated) return;
+
   try {
     serversBody.innerHTML = `<tr><td colspan="9" class="empty">Loading servers...</td></tr>`;
     const data = await api("/api/admin/servers");
     servers = data.servers || [];
     render();
   } catch (error) {
-    serversBody.innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(error.message)}</td></tr>`;
+    serversBody.innerHTML = `<tr><td colspan="9" class="empty">${escapeHtml(cleanError(error.message))}</td></tr>`;
   }
 }
 
@@ -65,6 +148,8 @@ async function deleteServer(id) {
 }
 
 function render() {
+  renderSummary();
+
   const text = filterInput.value.trim().toLowerCase();
   const selectedStatus = statusFilter.value;
   const filtered = servers.filter((server) => {
@@ -82,11 +167,6 @@ function render() {
       server.status
     ].filter(Boolean).join(" ").toLowerCase().includes(text);
   });
-
-  document.querySelector("#totalCount").textContent = servers.length;
-  document.querySelector("#verifiedCount").textContent = servers.filter((s) => s.status === "verified").length;
-  document.querySelector("#pendingCount").textContent = servers.filter((s) => s.status === "pending").length;
-  document.querySelector("#blockedCount").textContent = servers.filter((s) => s.status === "blocked").length;
 
   if (filtered.length === 0) {
     serversBody.innerHTML = `<tr><td colspan="9" class="empty">No matching servers.</td></tr>`;
@@ -127,6 +207,13 @@ function render() {
   }).join("");
 }
 
+function renderSummary() {
+  document.querySelector("#totalCount").textContent = servers.length;
+  document.querySelector("#verifiedCount").textContent = servers.filter((s) => s.status === "verified").length;
+  document.querySelector("#pendingCount").textContent = servers.filter((s) => s.status === "pending").length;
+  document.querySelector("#blockedCount").textContent = servers.filter((s) => s.status === "blocked").length;
+}
+
 function renderMods(mods) {
   if (!Array.isArray(mods) || mods.length === 0) {
     return `<span class="sub">None reported</span>`;
@@ -148,6 +235,16 @@ function formatDate(value) {
   if (!value) return "unknown";
   const date = new Date(value);
   return date.toLocaleString();
+}
+
+function cleanError(value) {
+  const text = String(value || "Request failed");
+  try {
+    const parsed = JSON.parse(text);
+    return parsed.error || text;
+  } catch {
+    return text;
+  }
 }
 
 function escapeHtml(value) {

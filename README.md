@@ -34,14 +34,35 @@ Sea Power multiplayer mod
 ```text
 DATABASE_URL=<Railway Postgres URL>
 ADMIN_TOKEN=<long random owner password/token>
+ADMIN_USERNAME=owner
+ADMIN_PASSWORD=<owner dashboard password>
 PUBLIC_BASE_URL=https://your-service.up.railway.app
 SERVER_TTL_SECONDS=300
 ALLOW_PENDING_SERVERS=false
 LAUNCHER_VERSION=0.1.0
-LAUNCHER_DOWNLOAD_URL=https://github.com/your-org/your-repo/releases/latest/download/SeaPowerMPDashboard.exe
+LAUNCHER_DOWNLOAD_URL=
+LAUNCHER_SHA256=
 ```
 
 Railway will build the Dockerfile in `backend/`.
+
+`ADMIN_TOKEN` signs the dashboard session cookie and can still be used as a bearer token for direct API calls. `ADMIN_USERNAME` and `ADMIN_PASSWORD` are the owner login credentials for `/admin/`.
+
+If `LAUNCHER_DOWNLOAD_URL` is blank, `/download` serves the bundled file at:
+
+```text
+backend/src/public/downloads/SeaPowerMultiplayerLauncher.exe
+```
+
+Current bundled launcher SHA-256:
+
+```text
+C7A07F11DC05AE84EBC5F58DC3F7D93BD5F5EC729B3C1F784868FC56C80ACCA4
+```
+
+This bundled executable is the existing v0.3.0 launcher package. Rebuild and replace it after producing a new launcher build that embeds the patched multiplayer DLL.
+
+Later, you can move the launcher to GitHub Releases and set `LAUNCHER_DOWNLOAD_URL` to that release asset URL.
 
 ## How Clients Connect
 
@@ -60,11 +81,13 @@ The desktop app should store the API base URL in its own settings. On first laun
 
 The same Railway service serves the public mod website at `/`.
 
-The public site can show active verified public servers, link to `/download` for the latest desktop app, and open the installed desktop app with a custom protocol:
+The public site shows a cinematic Sea Power front page, active verified public servers, a `/download` button for the desktop app, and custom protocol links for the installed launcher:
 
 ```text
 seapowermp://connect?serverId=<server-id>&registry=https://registry.yourdomain.com
 ```
+
+The hero uses official Steam-hosted Sea Power media URLs and links back to the Steam community videos page for attribution/reference.
 
 The website does not pass trusted IP details to the game. The desktop app must receive the custom protocol call, fetch `GET /api/servers/:id`, verify the server is still active, check local mod/scenario requirements, write the Sea Power multiplayer config, and launch the game.
 
@@ -138,9 +161,13 @@ PvP = <server mode>
 
 ## In-Game Overlay Integration
 
-The first build does not need the in-game overlay to browse public servers. The desktop app and website handle discovery.
+The multiplayer mod overlay has been patched to read this local handoff file from the BepInEx config folder:
 
-The current multiplayer mod already has an in-game overlay. A later plugin update can connect that overlay to this registry by reading a local `registry-session.json` written by the desktop app, or by calling the registry API directly from the plugin. That overlay can show listing status, scenario/mod requirements, and connection health. Actual ship movement and tactical play remain inside Sea Power.
+```text
+seapower-mp-registry-session.json
+```
+
+The desktop app should write the selected registry/server metadata there before launching Sea Power. The overlay can then show listing status, scenario/mod requirements, endpoint details, and connection health. Actual ship movement and tactical play remain inside Sea Power.
 
 ## Local Docker Test
 

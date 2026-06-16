@@ -13,13 +13,27 @@
         <p>Verify public listings, block bad hosts, and watch recent heartbeats.</p>
       </div>
       <div class="auth">
-        <input id="adminToken" type="password" placeholder="Admin token" autocomplete="current-password">
-        <button id="saveToken" type="button">Save</button>
+        <span id="sessionLabel">Signed out</span>
+        <button id="logout" type="button" class="hidden">Logout</button>
         <button id="refresh" type="button">Refresh</button>
       </div>
     </header>
 
     <main>
+      <section id="loginPanel" class="login-panel" aria-labelledby="loginTitle">
+        <div>
+          <h2 id="loginTitle">Owner Login</h2>
+          <p>Sign in to verify public servers and manage the registry.</p>
+        </div>
+        <form id="loginForm" class="login-form">
+          <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" value="owner">
+          <input id="password" name="password" type="password" placeholder="Password" autocomplete="current-password">
+          <button type="submit">Login</button>
+        </form>
+        <p id="loginMessage" class="login-message"></p>
+      </section>
+
+      <div id="dashboardPanel" class="hidden">
       <section class="summary" aria-label="Summary">
         <div>
           <span id="totalCount">0</span>
@@ -71,7 +85,14 @@
           </tbody>
         </table>
       </section>
+      </div>
     </main>
+
+    <footer class="dashboard-footer">
+      <span>Owner login</span>
+      <span>Created by Thunder Buddies Studio</span>
+      <span>v0.0.1</span>
+    </footer>
 
     <script src="/admin/admin.js"></script>
   </body>

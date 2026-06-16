@@ -1,8 +1,15 @@
 import express from "express";
+import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { config, requireRuntimeConfig } from "./config.js";
 import { closeDb, migrate, query } from "./db.js";
-import { requireAdmin } from "./auth.js";
+import {
+  clearAdminSessionCookie,
+  createAdminSessionCookie,
+  hasValidAdminSession,
+  isValidAdminLogin,
+  requireAdmin
+} from "./auth.js";
 import { validateHeartbeat } from "./validation.js";
 
 requireRuntimeConfig();
@@ -10,6 +17,8 @@ requireRuntimeConfig();
 const app = express();
 const adminStaticPath = fileURLToPath(new URL("./public/admin", import.meta.url));
 const siteStaticPath = fileURLToPath(new URL("./public/site", import.meta.url));
+const bundledLauncherPath = fileURLToPath(new URL("./public/downloads/SeaPowerMultiplayerLauncher.exe", import.meta.url));
+const bundledLauncherName = "SeaPowerMultiplayerLauncher.exe";
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
@@ -28,6 +37,20 @@ app.use((req, res, next) => {
 app.use("/admin", express.static(adminStaticPath));
 app.use("/", express.static(siteStaticPath));
 
+function publicBaseUrl(req) {
+  return config.publicBaseUrl || `${req.protocol}://${req.get("host")}`;
+}
+
+function bundledLauncherAvailable() {
+  return existsSync(bundledLauncherPath);
+}
+
+function launcherDownloadUrl(req) {
+  if (config.launcherDownloadUrl) return config.launcherDownloadUrl;
+  if (bundledLauncherAvailable()) return `${publicBaseUrl(req)}/download`;
+  return "";
+}
+
 app.get("/health", async (req, res) => {
   const result = await query("SELECT now() AS now");
   res.json({
@@ -38,20 +61,28 @@ app.get("/health", async (req, res) => {
 });
 
 app.get("/api/launcher/latest", (req, res) => {
+  const downloadUrl = launcherDownloadUrl(req);
   res.json({
     version: config.launcherVersion,
-    downloadUrl: config.launcherDownloadUrl,
+    downloadUrl,
     sha256: config.launcherSha256 || null,
-    apiBaseUrl: config.publicBaseUrl || `${req.protocol}://${req.get("host")}`
+    apiBaseUrl: publicBaseUrl(req),
+    bundled: !config.launcherDownloadUrl && bundledLauncherAvailable()
   });
 });
 
 app.get("/download", (req, res) => {
-  if (!config.launcherDownloadUrl) {
+  if (config.launcherDownloadUrl) {
+    res.redirect(config.launcherDownloadUrl);
+    return;
+  }
+
+  if (!bundledLauncherAvailable()) {
     res.status(404).send("Launcher download is not configured.");
     return;
   }
-  res.redirect(config.launcherDownloadUrl);
+
+  res.download(bundledLauncherPath, bundledLauncherName);
 });
 
 app.get("/api/servers", async (req, res) => {
@@ -188,6 +219,36 @@ app.post("/api/servers/:id/stop", async (req, res) => {
     [config.serverTtlSeconds + 60, req.params.id, parsed.value.hostKeyHash]
   );
 
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/session", (req, res) => {
+  res.json({
+    authenticated: hasValidAdminSession(req),
+    loginConfigured: Boolean(config.adminPassword),
+    username: config.adminUsername || "owner"
+  });
+});
+
+app.post("/api/admin/login", (req, res) => {
+  if (!config.adminPassword) {
+    res.status(503).json({ error: "admin_password_not_configured" });
+    return;
+  }
+
+  const username = typeof req.body?.username === "string" ? req.body.username.trim() : "";
+  const password = typeof req.body?.password === "string" ? req.body.password : "";
+  if (!isValidAdminLogin(username, password)) {
+    res.status(401).json({ error: "invalid_admin_login" });
+    return;
+  }
+
+  res.setHeader("Set-Cookie", createAdminSessionCookie());
+  res.json({ ok: true, username: config.adminUsername || "owner" });
+});
+
+app.post("/api/admin/logout", (req, res) => {
+  res.setHeader("Set-Cookie", clearAdminSessionCookie());
   res.json({ ok: true });
 });
 

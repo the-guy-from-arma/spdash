@@ -3,41 +3,104 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Sea Power Multiplayer</title>
+    <title>Sea Power Multiplayer Registry</title>
+    <meta name="description" content="Public Sea Power multiplayer server registry, desktop launcher download, and live server browser.">
     <link rel="stylesheet" href="/styles.css">
   </head>
   <body>
-    <header class="masthead">
-      <nav>
-        <span class="brand">Sea Power Multiplayer</span>
-        <a href="/admin/">Owner Dashboard</a>
-      </nav>
-      <div class="hero">
-        <h1>Find A Fleet. Join The Fight.</h1>
-        <p>Browse active public Sea Power multiplayer hosts, download the desktop app, and connect through the existing in-game multiplayer mod.</p>
-        <div class="actions">
-          <a class="primary" href="/download">Download Desktop App</a>
-          <button id="refreshServers" type="button">Refresh Servers</button>
-        </div>
+    <header class="hero-shell">
+      <div class="hero-media" aria-hidden="true">
+        <div class="poster-layer"></div>
+        <video id="heroVideo" class="hero-video" autoplay muted loop playsinline poster="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1286220/page_bg_raw.jpg?t=1778828436">
+          <source id="heroVideoSource" src="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1286220/extras/1764a9f8a160a2b79a357198352f1e40.webm?t=1778828436" type="video/webm">
+        </video>
+        <div class="hero-shade"></div>
+        <div class="scanlines"></div>
       </div>
+
+      <nav class="topbar" aria-label="Primary">
+        <a class="game-logo" href="/" aria-label="Sea Power Multiplayer home">
+          <img src="https://shared.fastly.steamstatic.com/store_item_assets/steam/apps/1286220/header.jpg?t=1778828436" alt="Sea Power">
+          <span>Multiplayer Registry</span>
+        </a>
+        <div class="nav-actions">
+          <a href="#servers">Servers</a>
+          <a href="/admin/">Owner Dashboard</a>
+        </div>
+      </nav>
+
+      <section class="hero-content" aria-labelledby="heroTitle">
+        <p class="eyebrow">Public fleet registry</p>
+        <h1 id="heroTitle">Sea Power Multiplayer</h1>
+        <p class="hero-copy">Download the desktop app, find verified public hosts, and connect through the Sea Power multiplayer mod with server, scenario, and mod requirements carried into the in-game overlay.</p>
+        <div class="hero-actions" aria-label="Launcher actions">
+          <a class="button primary" href="/download">
+            <span class="button-icon" aria-hidden="true">DL</span>
+            Download Desktop App
+          </a>
+          <button class="button secondary" id="refreshServers" type="button">
+            <span class="button-icon" aria-hidden="true">R</span>
+            Refresh Servers
+          </button>
+        </div>
+        <div class="hero-stats" aria-label="Registry status">
+          <div>
+            <span id="heroServerCount">--</span>
+            <small>active servers</small>
+          </div>
+          <div>
+            <span id="fleetStatus">Checking</span>
+            <small>registry status</small>
+          </div>
+          <div>
+            <span>Overlay</span>
+            <small>in-game overlay</small>
+          </div>
+        </div>
+      </section>
     </header>
 
     <main>
-      <section class="notice">
-        <strong>How connect works:</strong>
-        The website opens the installed desktop app with a secure handoff. The desktop app verifies the server with Railway, checks your mod/scenario requirements, writes the Sea Power config, then launches the game.
+      <section class="registry-band" aria-label="Registry workflow">
+        <div class="registry-step">
+          <span>01</span>
+          <strong>Host advertises</strong>
+          <p>The host launcher keeps the Railway registry updated with scenario, version, mod, and endpoint details.</p>
+        </div>
+        <div class="registry-step">
+          <span>02</span>
+          <strong>Player connects</strong>
+          <p>The desktop app verifies the selected server, checks local install state, and launches Sea Power.</p>
+        </div>
+        <div class="registry-step">
+          <span>03</span>
+          <strong>Overlay confirms</strong>
+          <p>The in-game overlay shows the chosen server, scenario, required mods, and connection health.</p>
+        </div>
       </section>
 
-      <section class="servers">
-        <div class="section-title">
-          <h2>Public Servers</h2>
+      <section id="servers" class="servers-section" aria-labelledby="serversTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Live operations</p>
+            <h2 id="serversTitle">Public Servers</h2>
+          </div>
           <span id="serverCount">Loading...</span>
         </div>
-        <div id="serversList" class="server-list"></div>
+        <div id="serversList" class="server-list" aria-live="polite"></div>
+      </section>
+
+      <section class="media-credit">
+        <p>Visual references use official Sea Power media from Steam. Review community videos and player footage on the <a href="https://steamcommunity.com/app/1286220/videos/" rel="noreferrer">Sea Power Steam videos page</a>.</p>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <a href="/admin/">Owner login</a>
+      <span>Created by Thunder Buddies Studio</span>
+      <span>v0.0.1</span>
+    </footer>
 
     <script src="/site.js"></script>
   </body>
 </html>
-
