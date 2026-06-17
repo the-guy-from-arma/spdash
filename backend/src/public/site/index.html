@@ -23,7 +23,19 @@
         <img src="/assets/tbs-emblem.svg" alt="">
         <span>OS Thunder Battle Management System</span>
         <strong>TBMS</strong>
-        <small>Studio showcase uplink initializing</small>
+        <small id="bootPhase">Studio showcase uplink initializing</small>
+      </div>
+      <div class="intro-boot">
+        <div class="boot-readout">
+          <span>System access</span>
+          <strong id="bootPercent">00%</strong>
+        </div>
+        <div class="boot-bar" aria-hidden="true"><span id="bootBar"></span></div>
+        <div class="boot-log" id="bootLog">
+          <span>Accessing /tbms/core/startup.cfg</span>
+          <span>Mounting /studio/showcase/assets</span>
+          <span>Waiting for fleet registry handshake</span>
+        </div>
       </div>
       <div class="intro-telemetry">
         <span>Weather layer online</span>

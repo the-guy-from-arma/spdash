@@ -1,4 +1,4 @@
-const loaderMinimumMs = 1850;
+const loaderMinimumMs = 4600;
 const startedAt = Date.now();
 const installButton = document.querySelector("#installPwa");
 const slideImage = document.querySelector("#currentSlideImage");
@@ -14,6 +14,10 @@ const scrollMeter = document.querySelector("#scrollMeter");
 const roadmapRoute = document.querySelector("#roadmapRoute");
 const activePhaseLabel = document.querySelector("#activePhaseLabel");
 const activePhaseText = document.querySelector("#activePhaseText");
+const bootPercent = document.querySelector("#bootPercent");
+const bootBar = document.querySelector("#bootBar");
+const bootLog = document.querySelector("#bootLog");
+const bootPhase = document.querySelector("#bootPhase");
 
 const slides = [
   {
@@ -112,6 +116,28 @@ const slides = [
 let deferredInstallPrompt = null;
 let activeSlide = 0;
 let slideTimer = null;
+let bootTimer = null;
+
+const bootLines = [
+  "Accessing /tbms/core/startup.cfg",
+  "Authenticating studio showcase package",
+  "Mounting /studio/showcase/assets",
+  "Reading storm-barrage visual layer",
+  "Opening weather and lightning pass",
+  "Loading maritime theater brief",
+  "Indexing gallery stills and roadmap data",
+  "Syncing air control profile",
+  "Preparing community release feed",
+  "Handoff ready"
+];
+
+const bootPhases = [
+  "Studio showcase uplink initializing",
+  "Accessing files and lighting layer",
+  "Loading theater systems",
+  "Preparing public showcase",
+  "Handoff ready"
+];
 
 window.addEventListener("load", finishBoot);
 window.addEventListener("scroll", updateScrollMeter, { passive: true });
@@ -139,15 +165,56 @@ setupGallery();
 setupRevealObserver();
 setupRoadmapObserver();
 setupQuestions();
+startBootSequence();
 updateScrollMeter();
 registerServiceWorker();
 
 function finishBoot() {
   const remaining = Math.max(0, loaderMinimumMs - (Date.now() - startedAt));
   window.setTimeout(() => {
+    window.clearInterval(bootTimer);
+    setBootProgress(100);
     document.body.classList.remove("booting");
     document.body.classList.add("is-loaded");
   }, remaining);
+}
+
+function startBootSequence() {
+  if (!bootPercent || !bootBar) return;
+  const duration = loaderMinimumMs - 350;
+  const bootStartedAt = Date.now();
+  let lastLineIndex = -1;
+  bootTimer = window.setInterval(() => {
+    const elapsed = Date.now() - bootStartedAt;
+    const rawProgress = Math.min(1, elapsed / duration);
+    const easedProgress = 1 - Math.pow(1 - rawProgress, 2.4);
+    const percent = Math.min(99, Math.floor(easedProgress * 100));
+    const lineIndex = Math.min(bootLines.length - 1, Math.floor(rawProgress * bootLines.length));
+    const phaseIndex = Math.min(bootPhases.length - 1, Math.floor(rawProgress * bootPhases.length));
+
+    setBootProgress(percent);
+    if (bootPhase) bootPhase.textContent = bootPhases[phaseIndex];
+    if (lineIndex !== lastLineIndex) {
+      lastLineIndex = lineIndex;
+      pushBootLine(bootLines[lineIndex]);
+    }
+  }, 90);
+}
+
+function setBootProgress(percent) {
+  const value = String(percent).padStart(2, "0");
+  if (bootPercent) bootPercent.textContent = `${value}%`;
+  if (bootBar) bootBar.style.width = `${percent}%`;
+}
+
+function pushBootLine(message) {
+  if (!bootLog || !message) return;
+  const line = document.createElement("span");
+  line.textContent = message;
+  bootLog.append(line);
+  while (bootLog.children.length > 4) {
+    bootLog.firstElementChild.remove();
+  }
 }
 
 function setupGallery() {

@@ -106,12 +106,38 @@ img {
   place-items: center;
   overflow: hidden;
   background: #020302;
-  transition: opacity 850ms ease, visibility 850ms ease;
+  transition: opacity 1050ms ease, visibility 1050ms ease;
 }
 
 body.is-loaded .intro {
   visibility: hidden;
   opacity: 0;
+}
+
+.intro::before,
+.intro::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.intro::before {
+  z-index: 1;
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(215, 181, 107, 0.34) 7% 7.12%, transparent 7.12% 93%, rgba(157, 197, 190, 0.22) 93% 93.1%, transparent 93.1%),
+    linear-gradient(180deg, transparent 0 12%, rgba(245, 241, 232, 0.18) 12% 12.08%, transparent 12.08% 88%, rgba(245, 241, 232, 0.14) 88% 88.08%, transparent 88.08%);
+  opacity: 0.42;
+}
+
+.intro::after {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 68% 25%, rgba(255, 245, 202, 0.34), transparent 18rem),
+    radial-gradient(circle at 78% 18%, rgba(229, 109, 73, 0.16), transparent 24rem),
+    linear-gradient(110deg, transparent 0 45%, rgba(157, 197, 190, 0.12) 45% 46%, transparent 46% 100%);
+  mix-blend-mode: screen;
+  animation: lightningPulse 5200ms ease-in-out infinite;
 }
 
 .intro-media,
@@ -125,41 +151,44 @@ body.is-loaded .intro {
   background-image: url("/assets/showcase/storm-barrage.png");
   background-position: center;
   background-size: cover;
-  filter: contrast(1.08) saturate(0.9);
-  transform: scale(1.12);
-  animation: introDrift 2600ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  filter: contrast(1.16) saturate(0.98) brightness(0.9);
+  transform: scale(1.16);
+  animation: introDrift 5200ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
 }
 
 .intro-veil {
   background:
-    linear-gradient(90deg, rgba(2, 3, 2, 0.96), rgba(2, 3, 2, 0.2) 54%, rgba(2, 3, 2, 0.88)),
-    linear-gradient(180deg, rgba(2, 3, 2, 0.2), rgba(2, 3, 2, 0.92));
+    linear-gradient(90deg, rgba(2, 3, 2, 0.97), rgba(2, 3, 2, 0.35) 50%, rgba(2, 3, 2, 0.86)),
+    linear-gradient(180deg, rgba(2, 3, 2, 0.18), rgba(2, 3, 2, 0.92)),
+    radial-gradient(circle at 72% 24%, rgba(215, 181, 107, 0.18), transparent 20rem);
 }
 
 .intro-scanline {
   background:
-    linear-gradient(90deg, transparent, rgba(215, 181, 107, 0.44), transparent),
+    linear-gradient(90deg, transparent, rgba(215, 181, 107, 0.58), transparent),
     repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0 1px, transparent 1px 9px);
   mix-blend-mode: screen;
   transform: translateX(-130%);
-  animation: scanAcross 1500ms ease-in-out 300ms forwards;
+  animation: scanAcross 2300ms ease-in-out 300ms infinite;
 }
 
 .intro-lockup {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   justify-items: center;
   gap: 8px;
   width: min(760px, calc(100% - 40px));
   text-align: center;
+  transform: translateY(-26px);
 }
 
 .intro-lockup img {
-  width: 72px;
-  height: 72px;
+  width: 78px;
+  height: 78px;
   margin-bottom: 12px;
-  filter: drop-shadow(0 0 30px rgba(215, 181, 107, 0.44));
+  filter: drop-shadow(0 0 34px rgba(215, 181, 107, 0.5));
+  animation: emblemPulse 2600ms ease-in-out infinite;
 }
 
 .intro-lockup span,
@@ -175,6 +204,9 @@ body.is-loaded .intro {
   font-size: clamp(72px, 18vw, 196px);
   line-height: 0.76;
   letter-spacing: 0;
+  text-shadow:
+    0 0 28px rgba(215, 181, 107, 0.22),
+    0 0 80px rgba(157, 197, 190, 0.14);
 }
 
 .intro-lockup small {
@@ -184,11 +216,90 @@ body.is-loaded .intro {
   text-transform: uppercase;
 }
 
+.intro-boot {
+  position: absolute;
+  left: max(22px, 5vw);
+  bottom: clamp(32px, 7vw, 78px);
+  z-index: 3;
+  display: grid;
+  gap: 12px;
+  width: min(520px, calc(100% - 44px));
+  color: rgba(245, 241, 232, 0.84);
+}
+
+.boot-readout {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(245, 241, 232, 0.26);
+  padding-bottom: 8px;
+}
+
+.boot-readout span,
+.boot-log span {
+  color: rgba(245, 241, 232, 0.72);
+  font-size: 11px;
+  font-weight: 760;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.boot-readout strong {
+  color: var(--brass);
+  font-size: clamp(30px, 5vw, 58px);
+  line-height: 0.82;
+  text-shadow: 0 0 22px rgba(215, 181, 107, 0.34);
+}
+
+.boot-bar {
+  position: relative;
+  overflow: hidden;
+  height: 6px;
+  background: rgba(245, 241, 232, 0.12);
+}
+
+.boot-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  transform: translateX(-100%);
+  animation: barSweep 1400ms ease-in-out infinite;
+}
+
+.boot-bar span {
+  display: block;
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--brass), var(--signal), var(--warning));
+  box-shadow: 0 0 22px rgba(215, 181, 107, 0.42);
+  transition: width 180ms ease-out;
+}
+
+.boot-log {
+  display: grid;
+  gap: 7px;
+  min-height: 74px;
+}
+
+.boot-log span {
+  position: relative;
+  padding-left: 18px;
+}
+
+.boot-log span::before {
+  content: ">";
+  position: absolute;
+  left: 0;
+  color: var(--signal);
+}
+
 .intro-telemetry {
   position: absolute;
   right: max(20px, 5vw);
   bottom: 28px;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   gap: 8px;
   color: rgba(245, 241, 232, 0.66);
@@ -214,6 +325,18 @@ body.is-loaded .intro {
   min-height: 100vh;
   overflow: hidden;
   background: #060706;
+}
+
+.site-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 5%, rgba(215, 181, 107, 0.18) 5% 5.08%, transparent 5.08% 95%, rgba(157, 197, 190, 0.12) 95% 95.08%, transparent 95.08%),
+    radial-gradient(circle at 78% 20%, rgba(215, 181, 107, 0.2), transparent 24rem);
+  opacity: 0.48;
 }
 
 .hero-broll,
@@ -340,7 +463,7 @@ body.is-loaded .intro {
 
 .hero-content {
   position: relative;
-  z-index: 2;
+  z-index: 3;
   display: grid;
   align-content: center;
   width: min(1340px, calc(100% - 44px));
@@ -440,7 +563,7 @@ h2 {
   position: absolute;
   right: max(22px, calc((100vw - 1340px) / 2));
   bottom: 28px;
-  z-index: 2;
+  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -555,7 +678,7 @@ main {
   left: max(22px, calc((100vw - 1340px) / 2));
   bottom: clamp(34px, 8vw, 96px);
   z-index: 1;
-  width: min(760px, calc(100% - 44px));
+  width: min(720px, calc(100% - 44px));
 }
 
 .flow-shot span,
@@ -574,8 +697,8 @@ main {
 .flow-shot strong {
   display: block;
   margin-top: 12px;
-  font-size: clamp(34px, 6.2vw, 86px);
-  line-height: 0.92;
+  font-size: clamp(26px, 4.2vw, 58px);
+  line-height: 1.04;
   text-transform: uppercase;
 }
 
@@ -1019,6 +1142,36 @@ main {
   }
 }
 
+@keyframes lightningPulse {
+  0%,
+  18%,
+  22%,
+  58%,
+  100% {
+    opacity: 0.42;
+  }
+  20%,
+  60% {
+    opacity: 0.94;
+  }
+}
+
+@keyframes emblemPulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.045);
+  }
+}
+
+@keyframes barSweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes heroFade {
   0% {
     opacity: 0;
@@ -1133,10 +1286,30 @@ main {
     justify-content: flex-start;
   }
 
+  .intro-lockup {
+    transform: translateY(-86px);
+  }
+
+  .intro-boot {
+    bottom: 106px;
+  }
+
+  .intro-telemetry {
+    right: 14px;
+    bottom: 24px;
+    left: 14px;
+    text-align: left;
+  }
+
   .flow-shot,
   .flow-shot img,
   .community-section {
     min-height: 620px;
+  }
+
+  .flow-shot strong {
+    font-size: clamp(24px, 8vw, 42px);
+    line-height: 1.08;
   }
 
   .flow-shot img {
