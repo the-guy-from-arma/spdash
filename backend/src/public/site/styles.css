@@ -11,6 +11,9 @@
   --signal: #9dc5be;
   --warning: #e56d49;
   --shadow: 0 34px 110px rgba(0, 0, 0, 0.56);
+  --font-display: "Bahnschrift", "Aptos Display", "Segoe UI", Arial, sans-serif;
+  --font-body: "Aptos", "Segoe UI", Arial, sans-serif;
+  --font-code: "Cascadia Mono", "Consolas", monospace;
 }
 
 * {
@@ -31,7 +34,8 @@ body {
     radial-gradient(circle at 82% 16%, rgba(215, 181, 107, 0.09), transparent 28rem),
     linear-gradient(180deg, #050604, #080908 58%, #050604);
   color: var(--text);
-  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-body);
+  font-weight: 500;
 }
 
 body.booting {
@@ -184,26 +188,88 @@ body.is-loaded .intro {
 }
 
 .intro-lockup img {
-  width: 78px;
-  height: 78px;
-  margin-bottom: 12px;
-  filter: drop-shadow(0 0 34px rgba(215, 181, 107, 0.5));
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 0 34px rgba(215, 181, 107, 0.62));
   animation: emblemPulse 2600ms ease-in-out infinite;
+}
+
+.emblem-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 178px;
+  height: 178px;
+  margin-bottom: 18px;
+}
+
+.emblem-stage::before,
+.emblem-stage::after,
+.emblem-ring {
+  content: "";
+  position: absolute;
+  border: 1px solid rgba(245, 241, 232, 0.18);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.emblem-stage::before {
+  inset: 0;
+  border-color: rgba(215, 181, 107, 0.52);
+  box-shadow:
+    0 0 28px rgba(215, 181, 107, 0.18),
+    inset 0 0 26px rgba(157, 197, 190, 0.1);
+  animation: targetRotate 5200ms linear infinite;
+}
+
+.emblem-stage::after {
+  inset: 22px;
+  border-color: rgba(157, 197, 190, 0.46);
+  border-style: dashed;
+  animation: targetRotate 7200ms linear reverse infinite;
+}
+
+.emblem-ring {
+  inset: 42px;
+  border-color: rgba(245, 241, 232, 0.22);
+  box-shadow: inset 0 0 18px rgba(215, 181, 107, 0.12);
+}
+
+.ring-two {
+  inset: 64px;
+  border-color: rgba(215, 181, 107, 0.32);
+}
+
+.emblem-bolt {
+  position: absolute;
+  right: 14px;
+  top: 22px;
+  width: 54px;
+  height: 104px;
+  background: linear-gradient(180deg, rgba(255, 246, 190, 0.96), rgba(215, 181, 107, 0.08));
+  clip-path: polygon(42% 0, 100% 0, 62% 42%, 95% 42%, 22% 100%, 42% 55%, 0 55%);
+  filter: blur(0.2px) drop-shadow(0 0 18px rgba(215, 181, 107, 0.78));
+  opacity: 0.62;
+  transform: rotate(13deg);
+  animation: boltFlash 3600ms ease-in-out infinite;
 }
 
 .intro-lockup span,
 .eyebrow {
   color: var(--brass);
+  font-family: var(--font-code);
   font-size: 12px;
   font-weight: 860;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .intro-lockup strong {
+  font-family: var(--font-display);
   font-size: clamp(72px, 18vw, 196px);
   line-height: 0.76;
   letter-spacing: 0;
+  font-weight: 900;
   text-shadow:
     0 0 28px rgba(215, 181, 107, 0.22),
     0 0 80px rgba(157, 197, 190, 0.14);
@@ -211,8 +277,9 @@ body.is-loaded .intro {
 
 .intro-lockup small {
   color: var(--muted);
+  font-family: var(--font-code);
   font-size: 13px;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -239,14 +306,16 @@ body.is-loaded .intro {
 .boot-readout span,
 .boot-log span {
   color: rgba(245, 241, 232, 0.72);
+  font-family: var(--font-code);
   font-size: 11px;
   font-weight: 760;
-  letter-spacing: 0.13em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .boot-readout strong {
   color: var(--brass);
+  font-family: var(--font-display);
   font-size: clamp(30px, 5vw, 58px);
   line-height: 0.82;
   text-shadow: 0 0 22px rgba(215, 181, 107, 0.34);
@@ -303,8 +372,9 @@ body.is-loaded .intro {
   display: grid;
   gap: 8px;
   color: rgba(245, 241, 232, 0.66);
+  font-family: var(--font-code);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-align: right;
   text-transform: uppercase;
 }
@@ -410,9 +480,10 @@ body.is-loaded .intro {
   display: inline-flex;
   align-items: center;
   gap: 12px;
+  font-family: var(--font-display);
   font-size: 12px;
   font-weight: 880;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-decoration: none;
   text-transform: uppercase;
 }
@@ -428,9 +499,10 @@ body.is-loaded .intro {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: clamp(14px, 2vw, 28px);
+  font-family: var(--font-code);
   font-size: 12px;
   font-weight: 760;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -473,26 +545,32 @@ body.is-loaded .intro {
 }
 
 h1 {
+  font-family: var(--font-display);
   max-width: 1060px;
   margin-bottom: 22px;
-  font-size: clamp(58px, 10.6vw, 158px);
-  line-height: 0.82;
+  font-size: clamp(58px, 9vw, 138px);
+  line-height: 0.88;
   letter-spacing: 0;
+  font-weight: 900;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 h2 {
+  font-family: var(--font-display);
   margin-bottom: 0;
-  font-size: clamp(34px, 6.8vw, 92px);
-  line-height: 0.9;
+  font-size: clamp(34px, 5.8vw, 78px);
+  line-height: 0.96;
   letter-spacing: 0;
+  font-weight: 880;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .hero-content p {
-  max-width: 780px;
+  max-width: 640px;
   color: rgba(245, 241, 232, 0.82);
-  font-size: clamp(17px, 2vw, 22px);
+  font-size: 20px;
   line-height: 1.58;
 }
 
@@ -516,9 +594,10 @@ h2 {
   color: var(--text);
   background: transparent;
   font: inherit;
+  font-family: var(--font-code);
   font-size: 12px;
   font-weight: 860;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-decoration: none;
   text-transform: uppercase;
   cursor: pointer;
@@ -570,9 +649,10 @@ h2 {
   gap: 10px 18px;
   max-width: 620px;
   color: rgba(245, 241, 232, 0.58);
+  font-family: var(--font-code);
   font-size: 11px;
   font-weight: 760;
-  letter-spacing: 0.14em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -623,15 +703,15 @@ main {
 
 .story-copy p:not(.eyebrow),
 .section-heading p {
-  max-width: 780px;
+  max-width: 700px;
   color: var(--muted);
-  font-size: clamp(16px, 1.8vw, 20px);
+  font-size: 18px;
   line-height: 1.6;
 }
 
 .story-copy h2 {
   margin: 12px 0 26px;
-  font-size: clamp(40px, 7vw, 88px);
+  font-size: clamp(38px, 5.8vw, 74px);
 }
 
 .cinema-flow {
@@ -688,18 +768,22 @@ main {
 .site-footer,
 .gallery-count {
   color: var(--brass);
+  font-family: var(--font-code);
   font-size: 12px;
   font-weight: 860;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
 .flow-shot strong {
   display: block;
   margin-top: 12px;
+  font-family: var(--font-display);
   font-size: clamp(26px, 4.2vw, 58px);
   line-height: 1.04;
+  font-weight: 880;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .gallery-section,
@@ -774,9 +858,12 @@ main {
   display: block;
   max-width: 920px;
   margin-bottom: 12px;
-  font-size: clamp(28px, 4.4vw, 58px);
-  line-height: 0.94;
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 50px);
+  line-height: 1;
+  font-weight: 880;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .gallery-stage p {
@@ -889,8 +976,10 @@ main {
 }
 
 .roadmap-glass strong {
-  font-size: clamp(46px, 7vw, 84px);
-  line-height: 0.82;
+  font-family: var(--font-display);
+  font-size: clamp(42px, 6vw, 72px);
+  line-height: 0.9;
+  font-weight: 900;
   text-transform: uppercase;
 }
 
@@ -970,9 +1059,12 @@ main {
   display: block;
   max-width: 760px;
   margin: 10px 0 14px;
-  font-size: clamp(26px, 4.2vw, 56px);
-  line-height: 0.94;
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.6vw, 46px);
+  line-height: 1.02;
+  font-weight: 880;
   text-transform: uppercase;
+  text-wrap: balance;
 }
 
 .road-phase p {
@@ -1010,16 +1102,18 @@ main {
 }
 
 .qa-item button span {
-  font-size: clamp(22px, 3.8vw, 48px);
+  font-family: var(--font-display);
+  font-size: clamp(22px, 3.2vw, 42px);
   font-weight: 820;
-  line-height: 1;
+  line-height: 1.04;
   text-transform: uppercase;
 }
 
 .qa-item button strong {
   color: var(--brass);
+  font-family: var(--font-code);
   font-size: 11px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -1030,7 +1124,7 @@ main {
 
 .qa-answer p {
   margin-bottom: 0;
-  font-size: clamp(16px, 1.8vw, 20px);
+  font-size: 18px;
   line-height: 1.66;
 }
 
@@ -1163,6 +1257,26 @@ main {
   }
   50% {
     transform: scale(1.045);
+  }
+}
+
+@keyframes targetRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes boltFlash {
+  0%,
+  78%,
+  100% {
+    opacity: 0.18;
+    transform: rotate(13deg) translateY(0);
+  }
+  80%,
+  84% {
+    opacity: 0.92;
+    transform: rotate(13deg) translateY(-4px);
   }
 }
 

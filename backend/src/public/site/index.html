@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Thunder Buddies Studios | Mid Pacific Naval Theater</title>
-    <meta name="description" content="Thunder Buddies Studios official showcase for the Mid Pacific Naval Theater, an Arma Reforger work-in-progress mod project.">
+    <title>Thunder Buddies Studios | Mid-Pacific Naval Theater</title>
+    <meta name="description" content="Thunder Buddies Studios official showcase for the Mid-Pacific Naval Theater, an Arma Reforger work-in-progress mod project.">
     <meta name="theme-color" content="#050604">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/assets/tbs-emblem.svg" type="image/svg+xml">
@@ -20,10 +20,15 @@
       <div class="intro-veil"></div>
       <div class="intro-scanline"></div>
       <div class="intro-lockup">
-        <img src="/assets/tbs-emblem.svg" alt="">
+        <div class="emblem-stage">
+          <span class="emblem-ring ring-one"></span>
+          <span class="emblem-ring ring-two"></span>
+          <img src="/assets/tbs-emblem.svg" alt="">
+          <span class="emblem-bolt"></span>
+        </div>
         <span>OS Thunder Battle Management System</span>
         <strong>TBMS</strong>
-        <small id="bootPhase">Studio showcase uplink initializing</small>
+        <small id="bootPhase">Opening command shell</small>
       </div>
       <div class="intro-boot">
         <div class="boot-readout">
@@ -32,9 +37,9 @@
         </div>
         <div class="boot-bar" aria-hidden="true"><span id="bootBar"></span></div>
         <div class="boot-log" id="bootLog">
-          <span>Accessing /tbms/core/startup.cfg</span>
+          <span>Opening /tbms/core/startup.cfg</span>
           <span>Mounting /studio/showcase/assets</span>
-          <span>Waiting for fleet registry handshake</span>
+          <span>Handshaking fleet registry</span>
         </div>
       </div>
       <div class="intro-telemetry">
@@ -68,9 +73,9 @@
       </nav>
 
       <section class="hero-content reveal" aria-labelledby="heroTitle">
-        <p class="eyebrow">Work in progress / Arma Reforger</p>
-        <h1 id="heroTitle">Mid Pacific Naval Theater</h1>
-        <p>Thunder Buddies Studios is building a maritime theater where open water carries tactical weight: warship command, reconnaissance, strike coordination, amphibious support, aircraft integration, and multiplayer operations built for a living battlefield.</p>
+        <p class="eyebrow">WIP build / Arma Reforger</p>
+        <h1 id="heroTitle">Mid-Pacific Naval Theater</h1>
+        <p>A naval expansion built around surface action, air tasking, amphibious landings, and command decisions that start long before the shoreline.</p>
         <div class="hero-actions">
           <a class="text-action primary" href="#gallery">Enter Showcase</a>
           <a class="text-action" href="#roadmap">Track Roadmap</a>
@@ -80,9 +85,9 @@
 
       <div class="hero-status" aria-hidden="true">
         <span>WIP</span>
-        <span>Naval systems</span>
-        <span>Air layer</span>
-        <span>Community testing</span>
+        <span>Surface warfare</span>
+        <span>Air tasking</span>
+        <span>Test channel</span>
       </div>
     </header>
 
@@ -93,8 +98,8 @@
         </div>
         <div class="story-copy reveal">
           <p class="eyebrow">The missing front</p>
-          <h2 id="theaterTitle">The ocean should feel like a place players fight through, not a border they fly over.</h2>
-          <p>The Mid Pacific Naval Theater is being shaped as a full operational space. Fleets need purpose, aircraft need targets, coastal teams need support, and commanders need pressure from beyond the shoreline.</p>
+          <h2 id="theaterTitle">The sea becomes an operating area, not empty map edge.</h2>
+          <p>Ships move with purpose. Aircraft hunt and protect. Shore teams fight under pressure from weapons they may never see. The theater is built to make distance matter.</p>
         </div>
       </section>
 
@@ -102,40 +107,40 @@
         <article class="flow-shot reveal">
           <img src="/assets/showcase/open-ocean-patrol.png" alt="Open ocean patrol at night.">
           <div>
-            <span>01 / Water as terrain</span>
-            <strong>Open water becomes navigable combat space with routes, risk, and visibility.</strong>
+            <span>01 / Sea lanes</span>
+            <strong>Routes, weather, and visibility turn open water into terrain.</strong>
           </div>
         </article>
         <article class="flow-shot reveal">
           <img src="/assets/showcase/missile-flight.png" alt="Three missiles over open water.">
           <div>
-            <span>02 / Modern strike layer</span>
-            <strong>Standoff weapons, reconnaissance, and escalation create pressure far outside rifle range.</strong>
+            <span>02 / Strike layer</span>
+            <strong>Recon, missiles, and launch windows push the fight beyond line of sight.</strong>
           </div>
         </article>
         <article class="flow-shot reveal">
           <img src="/assets/showcase/air-wing-dusk.png" alt="Air wing flying at dusk.">
           <div>
-            <span>03 / Air and fleet integration</span>
-            <strong>Jets, helicopters, and ships are planned to support one connected combat rhythm.</strong>
+            <span>03 / Air tasking</span>
+            <strong>Jets, helicopters, and ships operate from the same battle plan.</strong>
           </div>
         </article>
       </section>
 
       <section class="gallery-section" id="gallery" aria-labelledby="galleryTitle">
         <div class="section-heading reveal">
-          <p class="eyebrow">Studio showreel</p>
-          <h2 id="galleryTitle">A living gallery instead of a static wall.</h2>
-          <p>Every still is treated like part of the operational brief: surface action, weather, aviation, missile tests, and the six original showcase slides in one clean viewer.</p>
+          <p class="eyebrow">Studio reel</p>
+          <h2 id="galleryTitle">Field stills from the theater build.</h2>
+          <p>Surface ships, storms, missile tests, aircraft passes, and the original reveal slides collected as one clean operations reel.</p>
         </div>
 
         <div class="gallery-shell reveal">
           <figure class="gallery-stage">
-            <img id="currentSlideImage" src="/assets/showcase/mid-pacific-reveal.png" alt="Thunder Buddies Studios reveals the Mid Pacific Naval Theater.">
+            <img id="currentSlideImage" src="/assets/showcase/mid-pacific-reveal.png" alt="Thunder Buddies Studios reveals the Mid-Pacific Naval Theater.">
             <figcaption>
               <span id="currentSlideKicker">01 / Reveal</span>
-              <strong id="currentSlideTitle">Thunder Buddies Studios reveals the Mid Pacific Naval Theater.</strong>
-              <p id="currentSlideText">An ambitious project in development for Arma Reforger.</p>
+              <strong id="currentSlideTitle">Thunder Buddies Studios reveals the Mid-Pacific Naval Theater.</strong>
+              <p id="currentSlideText">A work-in-progress naval theater for Arma Reforger.</p>
             </figcaption>
           </figure>
           <div class="gallery-controls" aria-label="Showcase controls">
@@ -153,47 +158,47 @@
           <div class="roadmap-glass">
             <span>Six-month track</span>
             <strong id="activePhaseLabel">Month 01</strong>
-            <small id="activePhaseText">Pre-production and naval scope lock.</small>
+            <small id="activePhaseText">Scope lock and theater foundation.</small>
           </div>
         </div>
 
         <div class="roadmap-content">
           <div class="section-heading reveal">
             <p class="eyebrow">Roadmap</p>
-            <h2 id="roadmapTitle">Travel downward through the production plan.</h2>
-            <p>The first public release is planned as a stable community build, not every future feature at once. The path below tracks a realistic six-month route from scope to public release candidate.</p>
+            <h2 id="roadmapTitle">Six months from scope lock to release candidate.</h2>
+            <p>The first public build should be focused and stable. This track moves from hard scope, to imported assets, to playable water, to closed operations, then Workshop packaging.</p>
           </div>
 
           <ol class="roadmap-route" id="roadmapRoute">
             <li class="road-phase reveal" data-month="Month 01" data-summary="Theater foundation and scope lock.">
               <span>Month 01 / Pre-production</span>
-              <strong>Theater foundation and naval scope</strong>
-              <p>Lock the playable vision: island chains, sea-lane logic, ship class roles, aviation needs, target categories, landing areas, mission cadence, and server limits. This phase turns ambition into a clear build list.</p>
+              <strong>Scope lock and theater foundation</strong>
+              <p>Define island chains, sea lanes, ship roles, aircraft needs, landing areas, target categories, mission cadence, and server limits. The result is a build list the team can actually ship.</p>
             </li>
             <li class="road-phase reveal" data-month="Month 02" data-summary="Hull, weapon, collision, and Enfusion import pass.">
               <span>Month 02 / Asset pipeline</span>
-              <strong>Boat and warship production pass</strong>
-              <p>Prepare hull models, collision geometry, LODs, materials, damage zones, wake references, turrets, launcher sockets, crew points, and prefab structure. Each vessel moves through import, validation, and first playable placement.</p>
+              <strong>Hull, weapon, and prefab pipeline</strong>
+              <p>Prepare hulls, collision, LODs, materials, damage zones, wake references, turrets, launch sockets, crew points, and prefab structure. Each vessel moves from import to first playable placement.</p>
             </li>
             <li class="road-phase reveal" data-month="Month 03" data-summary="Ocean routes, ports, objectives, and staging areas.">
               <span>Month 03 / World integration</span>
-              <strong>Ocean, ports, and operation spaces</strong>
-              <p>Shape water as terrain: routes, dock areas, amphibious corridors, objective islands, recon lanes, carrier or fleet staging, coastal approach logic, lighting, weather, and atmospheric readability for long-range engagements.</p>
+              <strong>Ocean routes, ports, and objectives</strong>
+              <p>Build the playable water: dock areas, amphibious corridors, objective islands, recon lanes, fleet staging, coastal approaches, lighting, weather, and readable long-range contact points.</p>
             </li>
             <li class="road-phase reveal" data-month="Month 04" data-summary="Movement, sensors, weapons, jets, and network behavior.">
               <span>Month 04 / Systems testing</span>
-              <strong>Movement, weapons, sensors, and flight control</strong>
-              <p>Test ship handling, turning radius, acceleration, fire-control behavior, missile profiles, helicopter support, jet operations, HOCAS-compatible control profiles, replication, dedicated-server behavior, and performance under real scenario load.</p>
+              <strong>Movement, weapons, sensors, and controls</strong>
+              <p>Test ship handling, missile behavior, helicopter support, jet operations, HOCAS-compatible profiles, replication, dedicated-server behavior, and performance under scenario load.</p>
             </li>
             <li class="road-phase reveal" data-month="Month 05" data-summary="Closed Discord tests and balance correction.">
               <span>Month 05 / Closed community trials</span>
-              <strong>Scheduled operations and balance correction</strong>
-              <p>Run trusted community playtests focused on navigation clarity, mission pacing, server stability, survivability, weapon ranges, logistics pressure, spawn logic, objective value, and whether the naval layer creates repeatable battles.</p>
+              <strong>Closed operations and balance passes</strong>
+              <p>Run trusted playtests for navigation clarity, mission pacing, stability, survivability, weapon ranges, logistics pressure, spawn logic, objective value, and replayable naval fights.</p>
             </li>
             <li class="road-phase reveal" data-month="Month 06" data-summary="Workshop package and public release candidate.">
               <span>Month 06 / Release candidate</span>
-              <strong>Workshop packaging and public deployment</strong>
-              <p>Finalize metadata, dependency notes, server instructions, screenshots, launch scenario, known issues, changelog, and showcase media. The first release should be focused, stable, and ready to expand through updates.</p>
+              <strong>Workshop package and launch brief</strong>
+              <p>Finalize metadata, dependencies, server notes, screenshots, launch scenario, known issues, changelog, and showcase media. The first release lands focused, stable, and ready to expand.</p>
             </li>
           </ol>
         </div>
@@ -202,53 +207,53 @@
       <section class="qa-section" id="qa" aria-labelledby="qaTitle">
         <div class="section-heading reveal">
           <p class="eyebrow">Player Q/A</p>
-          <h2 id="qaTitle">What this project is trying to become.</h2>
+          <h2 id="qaTitle">Clear answers before the first public build.</h2>
         </div>
 
         <div class="qa-list reveal">
           <article class="qa-item">
             <button type="button" aria-expanded="true">
-              <span>Is this just ships added to a map?</span>
+              <span>Is this just ships on a map?</span>
               <strong>Close</strong>
             </button>
             <div class="qa-answer">
-              <p>No. The goal is a naval theater where ships, aircraft, amphibious movement, recon, and coastal objectives all affect the match. Vessels should create decisions, not sit offshore as scenery.</p>
+              <p>No. Ships are meant to create decisions: routes to protect, targets to hunt, aircraft to support, beaches to pressure, and objectives that make the water worth fighting over.</p>
             </div>
           </article>
           <article class="qa-item">
             <button type="button" aria-expanded="false">
-              <span>What ideas are shaping the design?</span>
+              <span>What is shaping the design?</span>
               <strong>Open</strong>
             </button>
             <div class="qa-answer" hidden>
-              <p>The design pulls from naval command pacing, modern strike tension, and serious flight-control expectations while staying practical for multiplayer operations. It is inspiration, not a port or copy of another title.</p>
+              <p>Naval command pacing, modern strike pressure, and practical multiplayer readability. The project is built for Reforger operations, not as a copy of another game.</p>
             </div>
           </article>
           <article class="qa-item">
             <button type="button" aria-expanded="false">
-              <span>How deep will aviation support go?</span>
+              <span>How deep is the air layer?</span>
               <strong>Open</strong>
             </button>
             <div class="qa-answer" hidden>
-              <p>The plan includes jets, helicopters, recon, strike roles, and HOCAS-compatible control profiles where the engine and input stack allow it. The goal is credible control depth without making every pilot learn a full study-sim cockpit.</p>
+              <p>The plan covers jets, helicopters, recon, strike roles, and HOCAS-compatible control profiles where the engine allows it. Serious enough to matter, direct enough to play.</p>
             </div>
           </article>
           <article class="qa-item">
             <button type="button" aria-expanded="false">
-              <span>What makes the boat pipeline hard?</span>
+              <span>Why is the ship pipeline hard?</span>
               <strong>Open</strong>
             </button>
             <div class="qa-answer" hidden>
-              <p>Large vessels need more than a model. They require collision, LODs, damage setup, launch points, weapon logic, crew positions, water interaction, wakes, networking, server performance checks, and mission logic that gives the vessel a reason to exist.</p>
+              <p>A ship needs collision, LODs, damage setup, launch points, weapons, crew positions, water interaction, wakes, networking, performance checks, and mission logic. The model is only the start.</p>
             </div>
           </article>
           <article class="qa-item">
             <button type="button" aria-expanded="false">
-              <span>When should players expect access?</span>
+              <span>When do players get access?</span>
               <strong>Open</strong>
             </button>
             <div class="qa-answer" hidden>
-              <p>The working target is a six-month route toward a stable community release candidate. Closed testing should happen before public packaging so the first release feels intentional, readable, and worth returning to.</p>
+              <p>The working target is a six-month route toward a stable community release candidate. Closed tests come first so the public build feels deliberate, readable, and worth replaying.</p>
             </div>
           </article>
         </div>
@@ -258,7 +263,7 @@
         <img src="/assets/showcase/sunset-destroyer.png" alt="Destroyer silhouette at sunset.">
         <div class="community-copy reveal">
           <p class="eyebrow">Community channel</p>
-          <h2>Join the studio feed for test windows, progress drops, and release calls.</h2>
+          <h2>Follow test windows, build notes, and release calls.</h2>
           <div class="hero-actions">
             <a class="text-action primary" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Join Discord</a>
             <a class="text-action" href="#gallery">Back To Gallery</a>

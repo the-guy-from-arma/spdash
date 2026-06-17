@@ -22,94 +22,94 @@ const bootPhase = document.querySelector("#bootPhase");
 const slides = [
   {
     image: "/assets/showcase/mid-pacific-reveal.png",
-    alt: "Thunder Buddies Studios reveals the Mid Pacific Naval Theater.",
+    alt: "Thunder Buddies Studios reveals the Mid-Pacific Naval Theater.",
     kicker: "01 / Reveal",
-    title: "Thunder Buddies Studios reveals the Mid Pacific Naval Theater.",
-    text: "An ambitious project in development for Arma Reforger."
+    title: "Thunder Buddies Studios reveals the Mid-Pacific Naval Theater.",
+    text: "A work-in-progress naval theater for Arma Reforger."
   },
   {
     image: "/assets/showcase/naval-gap.png",
     alt: "Modern warship in heavy seas for the naval warfare gap slide.",
     kicker: "02 / The gap",
-    title: "True naval warfare has not had a permanent place on the battlefield.",
-    text: "The project expands the fight beyond infantry, armor, and aircraft by making the water matter."
+    title: "The water gets a mission.",
+    text: "The build pushes the fight beyond land contact and turns distance into pressure."
   },
   {
     image: "/assets/showcase/goal-change.png",
     alt: "Warships crossing open water.",
     kicker: "03 / Objective",
-    title: "Our goal is to change that.",
-    text: "The ocean becomes an operational space with pressure, purpose, and consequence."
+    title: "The goal is simple: make the sea matter.",
+    text: "Routes, visibility, weapons, and timing become part of the plan."
   },
   {
     image: "/assets/showcase/living-battlefield.png",
     alt: "Warship moving through open water at night.",
     kicker: "04 / Battlefield",
-    title: "Transform the ocean from empty space into a living battlefield.",
-    text: "The Mid Pacific Naval Theater is designed around meaningful open-water operations."
+    title: "Empty water becomes a live battlespace.",
+    text: "Patrols, contacts, and threats give open water a reason to exist."
   },
   {
     image: "/assets/showcase/fleet-operations.png",
     alt: "Warship launching a missile while a helicopter flies above.",
     kicker: "05 / Fleet operations",
-    title: "Fight across open water and command warships.",
-    text: "Coordinate fleet operations, recon missions, amphibious support, and large-scale maritime conflict."
+    title: "Fleet action drives the operation.",
+    text: "Warships, aircraft, recon, and shore objectives move in the same fight."
   },
   {
     image: "/assets/showcase/progress-updates.png",
     alt: "Modern aircraft flying over mountains.",
     kicker: "06 / Progress",
-    title: "Technical demonstrations and progress drops are planned.",
-    text: "As development continues, Thunder Buddies Studios will share more with the community."
+    title: "Technical drops will follow the build.",
+    text: "Showcases, tests, and progress notes will ship as systems come online."
   },
   {
     image: "/assets/showcase/open-ocean-patrol.png",
     alt: "Open ocean patrol at night.",
     kicker: "07 / Patrol",
-    title: "Open water becomes playable space.",
-    text: "Distance, darkness, weather, and wake visibility all become part of the battlefield language."
+    title: "Patrol space gets teeth.",
+    text: "Darkness, wake trails, and weather become tactical cues."
   },
   {
     image: "/assets/showcase/missile-flight.png",
     alt: "Three missiles flying above open water.",
     kicker: "08 / Strike profile",
-    title: "Standoff weapons shape the tempo of the fight.",
-    text: "Modern strike behavior creates decisions before opposing forces ever share the same shoreline."
+    title: "Strike windows set the tempo.",
+    text: "Missiles and recon create decisions before forces meet at the shore."
   },
   {
     image: "/assets/showcase/carrier-group.png",
     alt: "Carrier group and surface ship operating in rough seas.",
     kicker: "09 / Fleet staging",
-    title: "Carrier groups and surface action groups become mission anchors.",
-    text: "Large vessels should stage objectives, support aircraft, and give teams a reason to protect sea lanes."
+    title: "Major vessels become anchors.",
+    text: "Fleet staging gives teams routes to protect and targets worth hunting."
   },
   {
     image: "/assets/showcase/air-wing-dusk.png",
     alt: "Air wing flying at dusk.",
     kicker: "10 / Air layer",
-    title: "Air wing integration supports naval operations.",
-    text: "Jets and support aircraft are planned around useful roles, readable controls, and HOCAS-compatible profiles."
+    title: "Air tasking ties into the fleet.",
+    text: "Jets and support aircraft are planned around clear roles and HOCAS-compatible profiles."
   },
   {
     image: "/assets/showcase/rain-missile-launch.png",
     alt: "Ship launching a missile in rain at night.",
     kicker: "11 / Weather fight",
-    title: "All-weather engagements should change how crews move.",
-    text: "Rain, darkness, missiles, and silhouette recognition help sell the tension of surface warfare."
+    title: "Bad weather changes the read.",
+    text: "Rain, darkness, launch bloom, and silhouette recognition raise the tension."
   },
   {
     image: "/assets/showcase/sunset-destroyer.png",
     alt: "Destroyer at sunset on open water.",
     kicker: "12 / Surface combatant",
-    title: "Surface combatants need readable presence and purpose.",
-    text: "The visual language has to work from cinematic distance and practical multiplayer views."
+    title: "Surface combatants need presence.",
+    text: "The silhouette has to read from cinematic distance and playable views."
   },
   {
     image: "/assets/showcase/storm-barrage.png",
     alt: "Ships firing missiles during a storm.",
     kicker: "13 / Escalation",
-    title: "Weather, fire, smoke, and scale sell the battlefield.",
-    text: "The project aims for naval combat that feels dangerous before the first impact lands."
+    title: "Escalation should feel immediate.",
+    text: "Weather, fire, smoke, and scale make the battlefield feel dangerous before impact."
   }
 ];
 
@@ -119,23 +119,22 @@ let slideTimer = null;
 let bootTimer = null;
 
 const bootLines = [
-  "Accessing /tbms/core/startup.cfg",
+  "Opening /tbms/core/startup.cfg",
   "Authenticating studio showcase package",
   "Mounting /studio/showcase/assets",
-  "Reading storm-barrage visual layer",
-  "Opening weather and lightning pass",
-  "Loading maritime theater brief",
+  "Loading storm and lightning layer",
+  "Reading maritime theater brief",
   "Indexing gallery stills and roadmap data",
   "Syncing air control profile",
-  "Preparing community release feed",
+  "Preparing public release feed",
   "Handoff ready"
 ];
 
 const bootPhases = [
-  "Studio showcase uplink initializing",
-  "Accessing files and lighting layer",
-  "Loading theater systems",
-  "Preparing public showcase",
+  "Opening command shell",
+  "Accessing theater files",
+  "Loading combat systems",
+  "Preparing public feed",
   "Handoff ready"
 ];
 
