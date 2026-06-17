@@ -1,8 +1,7 @@
 import express from "express";
-import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { config, requireRuntimeConfig } from "./config.js";
-import { closeDb, migrate, query } from "./db.js";
+import { closeDb, databaseConfigured, migrate, query } from "./db.js";
 import {
   clearAdminSessionCookie,
   createAdminSessionCookie,
@@ -17,8 +16,6 @@ requireRuntimeConfig();
 const app = express();
 const adminStaticPath = fileURLToPath(new URL("./public/admin", import.meta.url));
 const siteStaticPath = fileURLToPath(new URL("./public/site", import.meta.url));
-const bundledLauncherPath = fileURLToPath(new URL("./public/downloads/SeaPowerMultiplayerLauncher.exe", import.meta.url));
-const bundledLauncherName = "SeaPowerMultiplayerLauncher.exe";
 
 app.disable("x-powered-by");
 app.use(express.json({ limit: "256kb" }));
@@ -37,21 +34,16 @@ app.use((req, res, next) => {
 app.use("/admin", express.static(adminStaticPath));
 app.use("/", express.static(siteStaticPath));
 
-function publicBaseUrl(req) {
-  return config.publicBaseUrl || `${req.protocol}://${req.get("host")}`;
-}
-
-function bundledLauncherAvailable() {
-  return existsSync(bundledLauncherPath);
-}
-
-function launcherDownloadUrl(req) {
-  if (config.launcherDownloadUrl) return config.launcherDownloadUrl;
-  if (bundledLauncherAvailable()) return `${publicBaseUrl(req)}/download`;
-  return "";
-}
-
 app.get("/health", async (req, res) => {
+  if (!databaseConfigured) {
+    res.json({
+      ok: true,
+      mode: "showcase",
+      database: "not_configured"
+    });
+    return;
+  }
+
   const result = await query("SELECT now() AS now");
   res.json({
     ok: true,
@@ -60,29 +52,8 @@ app.get("/health", async (req, res) => {
   });
 });
 
-app.get("/api/launcher/latest", (req, res) => {
-  const downloadUrl = launcherDownloadUrl(req);
-  res.json({
-    version: config.launcherVersion,
-    downloadUrl,
-    sha256: config.launcherSha256 || null,
-    apiBaseUrl: publicBaseUrl(req),
-    bundled: !config.launcherDownloadUrl && bundledLauncherAvailable()
-  });
-});
-
 app.get("/download", (req, res) => {
-  if (config.launcherDownloadUrl) {
-    res.redirect(config.launcherDownloadUrl);
-    return;
-  }
-
-  if (!bundledLauncherAvailable()) {
-    res.status(404).send("Launcher download is not configured.");
-    return;
-  }
-
-  res.download(bundledLauncherPath, bundledLauncherName);
+  res.redirect("/");
 });
 
 app.get("/api/servers", async (req, res) => {
@@ -309,13 +280,17 @@ app.delete("/api/admin/servers/:id", requireAdmin, async (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error(err);
+  if (err.status === 503 && err.message === "database_not_configured") {
+    res.status(503).json({ error: "database_not_configured" });
+    return;
+  }
   res.status(500).json({ error: "internal_error" });
 });
 
 await migrate();
 
 const server = app.listen(config.port, () => {
-  console.log(`Sea Power MP Registry listening on ${config.port}`);
+  console.log(`Thunder Buddies Studios site listening on ${config.port}`);
 });
 
 async function shutdown() {

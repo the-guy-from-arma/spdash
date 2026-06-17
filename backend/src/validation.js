@@ -57,7 +57,7 @@ export function validateHeartbeat(body, req) {
   return {
     value: {
       hostKeyHash: sha256(hostKey),
-      name: cleanText(body.name, "Unnamed Sea Power Server", 80),
+      name: cleanText(body.name, "Unnamed Reforger Listing", 80),
       visibility: cleanEnum(body.visibility, ["public", "friends", "private"], "public"),
       mode: cleanEnum(body.mode, ["pvp", "coop"], "pvp"),
       transport: cleanEnum(body.transport, ["LiteNetLib", "Steam"], "LiteNetLib"),

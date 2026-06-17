@@ -8,7 +8,7 @@ function safeEqualText(a, b) {
   return timingSafeEqual(left, right);
 }
 
-const adminCookieName = "spmp_admin";
+const adminCookieName = "tbs_admin";
 const sessionTtlSeconds = 60 * 60 * 12;
 const secureCookie = process.env.NODE_ENV === "production" ? "; Secure" : "";
 
