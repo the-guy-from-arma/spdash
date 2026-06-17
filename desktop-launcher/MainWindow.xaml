@@ -234,7 +234,7 @@
 
                     <Label Content="Registry API"/>
                     <TextBox x:Name="TxtRegistryUrl"
-                             Text="https://spdash-production.up.railway.app"
+                             Text="https://tb-studios.up.railway.app"
                              Margin="0,0,0,8"/>
 
                     <Grid Margin="0,0,0,8">

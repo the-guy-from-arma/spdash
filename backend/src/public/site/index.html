@@ -165,29 +165,13 @@
 
       <section class="products-section" id="products" aria-labelledby="productsTitle">
         <div class="section-heading reveal">
-          <p class="eyebrow">Studio products</p>
-          <h2 id="productsTitle">Thunder Buddies mod pages live here.</h2>
-          <p>Three product slots are wired for Workshop or mod-page links. Send the exact pages and these buttons will point straight to the live listings.</p>
+          <p class="eyebrow">Published catalog</p>
+          <h2 id="productsTitle">Thunder Buddies Studios Workshop manifest.</h2>
+          <p>Every published studio release is indexed from the official Arma Reforger Workshop search, with direct links, versions, categories, and update dates surfaced in one clean manifest.</p>
+          <a class="text-action small" href="https://reforger.armaplatform.com/workshop?search=thunder+buddies+studios" rel="noreferrer">Open Workshop Search</a>
         </div>
         <div class="product-rail reveal" id="productRail">
-          <article class="product-item" data-product-index="0">
-            <span>Primary Mod</span>
-            <strong>Mid-Pacific Naval Theater</strong>
-            <p>Surface combatants, sea lanes, amphibious pressure, and air tasking built for Reforger operations.</p>
-            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
-          </article>
-          <article class="product-item" data-product-index="1">
-            <span>Studio Framework</span>
-            <strong>Thunder Buddies Core</strong>
-            <p>Shared configuration, community operations, showcase systems, and common release infrastructure.</p>
-            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
-          </article>
-          <article class="product-item" data-product-index="2">
-            <span>Upcoming Module</span>
-            <strong>Air-Sea Strike Package</strong>
-            <p>Jet support, HOCAS-compatible profiles, strike roles, and fleet-connected aviation objectives.</p>
-            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
-          </article>
+          <p class="catalog-loading">Loading official Workshop manifest...</p>
         </div>
       </section>
 
@@ -327,38 +311,74 @@
       </header>
 
       <p class="drawer-status" id="communityStatus">Checking Discord link...</p>
-      <div class="drawer-user" id="drawerUser" hidden>
-        <img id="drawerAvatar" src="/assets/tbs-emblem.svg" alt="">
-        <div>
-          <span>Signed in as</span>
-          <strong id="drawerName">Discord user</strong>
-        </div>
-      </div>
 
-      <div class="drawer-actions">
+      <div class="drawer-actions" id="drawerLoginActions">
         <a class="text-action primary" id="discordLogin" href="/api/discord/login">Login With Discord</a>
         <button class="text-action small" id="discordLogout" type="button" hidden>Logout</button>
       </div>
 
-      <section class="drawer-section">
-        <span>Daily check-in</span>
+      <section class="station-console" id="stationConsole" hidden>
+        <div class="station-identity">
+          <img id="drawerAvatar" src="/assets/tbs-emblem.svg" alt="">
+          <div>
+            <span>Personal station</span>
+            <strong id="drawerName">Discord user</strong>
+            <small id="stationTag">Awaiting account sync</small>
+          </div>
+        </div>
+        <div class="station-readout">
+          <div>
+            <span>Check-ins</span>
+            <strong id="stationCheckins">00</strong>
+          </div>
+          <div>
+            <span>Questions</span>
+            <strong id="stationQuestions">00</strong>
+          </div>
+          <div>
+            <span>Today</span>
+            <strong id="stationToday">Open</strong>
+          </div>
+        </div>
+        <p id="stationLastCheckin">No morale check logged yet.</p>
+      </section>
+
+      <section class="drawer-section morale-section">
+        <span>Morale check</span>
+        <p class="drawer-copy">A quick daily station check. Not a report card, just a pulse for the team.</p>
         <form id="checkinForm">
-          <label for="checkinMood">Status</label>
+          <label for="checkinMood">How are you arriving today?</label>
           <select id="checkinMood" name="mood">
-            <option value="on_station">On station</option>
-            <option value="testing">Testing build</option>
-            <option value="watching">Watching progress</option>
-            <option value="blocked">Blocked / needs help</option>
-            <option value="other">Other</option>
+            <option value="green">Green / steady</option>
+            <option value="blue">Blue / quiet but here</option>
+            <option value="amber">Amber / tired</option>
+            <option value="red">Red / need support</option>
+            <option value="gold">Gold / hyped for ops</option>
           </select>
+          <label for="moraleScore">Morale level</label>
+          <input id="moraleScore" name="moraleScore" type="range" min="1" max="5" value="4">
           <label for="checkinNote">Optional note</label>
-          <textarea id="checkinNote" name="note" rows="3" maxlength="300" placeholder="Short check-in for the team."></textarea>
-          <button class="text-action primary" type="submit">Send Check-In</button>
+          <textarea id="checkinNote" name="note" rows="3" maxlength="300" placeholder="One line for the watch officer."></textarea>
+          <button class="text-action primary" type="submit">Log Morale</button>
           <p class="form-status" id="checkinStatus"></p>
         </form>
       </section>
 
       <section class="drawer-section">
+        <span>Operations board</span>
+        <div class="ops-feed" id="eventsFeed">
+          <p class="drawer-copy">Events load after the station feed connects.</p>
+        </div>
+      </section>
+
+      <section class="drawer-section">
+        <span>Command postings</span>
+        <div class="postings-feed" id="postingsFeed">
+          <p class="drawer-copy">Postings load after the station feed connects.</p>
+        </div>
+      </section>
+
+      <section class="drawer-section question-section">
         <span>Ask the studio</span>
         <form id="questionForm">
           <label for="questionText">Question</label>
@@ -368,8 +388,8 @@
         </form>
       </section>
 
-      <section class="drawer-section">
-        <span>Product links</span>
+      <section class="drawer-section product-section">
+        <span>Workshop manifest</span>
         <div class="drawer-products" id="drawerProducts"></div>
       </section>
     </aside>

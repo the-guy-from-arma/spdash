@@ -20,6 +20,7 @@ import {
   requireAdmin
 } from "./auth.js";
 import { cleanEnum, cleanText, validateHeartbeat } from "./validation.js";
+import { workshopCatalog, workshopCatalogSource } from "./workshop-catalog.js";
 
 requireRuntimeConfig();
 
@@ -67,29 +68,11 @@ app.get("/download", (req, res) => {
   res.redirect("/");
 });
 
-const products = [
-  {
-    title: "Mid-Pacific Naval Theater",
-    type: "Primary Mod",
-    status: "WIP",
-    copy: "Surface combatants, sea lanes, amphibious pressure, and air tasking built for Reforger operations.",
-    url: config.modProductOneUrl
-  },
-  {
-    title: "Thunder Buddies Core",
-    type: "Studio Framework",
-    status: "Active",
-    copy: "Shared configuration, community operations, showcase systems, and common release infrastructure.",
-    url: config.modProductTwoUrl
-  },
-  {
-    title: "Air-Sea Strike Package",
-    type: "Upcoming Module",
-    status: "Planned",
-    copy: "Jet support, HOCAS-compatible profiles, strike roles, and fleet-connected aviation objectives.",
-    url: config.modProductThreeUrl
-  }
-];
+const products = workshopCatalog.map((mod) => ({
+  ...mod,
+  status: `v${mod.version}`,
+  copy: `${formatWorkshopType(mod.type)} release by Thunder Buddies Studios. Updated ${formatCatalogDate(mod.updatedAt)}.`
+}));
 
 const radioTraffic = [
   "CIC reports surface contact bearing 042, range opening.",
@@ -98,7 +81,55 @@ const radioTraffic = [
   "Amphibious corridor marked, escort package requested.",
   "Radar picket reports intermittent launch bloom beyond horizon.",
   "Logistics channel requests daily check-in from all station members.",
-  "Workshop links pending final product page verification."
+  "Workshop catalog synchronized from official Thunder Buddies listings."
+];
+
+const fallbackPosts = [
+  {
+    category: "command post",
+    title: "Welcome aboard TBMS",
+    body: "The Community Net is live. Discord sign-in opens a personal station with questions, check-ins, events, and studio postings.",
+    postedAt: new Date().toISOString()
+  },
+  {
+    category: "development",
+    title: "Theater scope is being locked",
+    body: "Current focus is ship roles, aircraft tasking, sea-lane purpose, and a clean first public release path.",
+    postedAt: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    category: "testing",
+    title: "Closed test prep",
+    body: "Early test windows will prioritize stability, readable naval objectives, and the first pass of player feedback.",
+    postedAt: new Date(Date.now() - 172800000).toISOString()
+  }
+];
+
+const fallbackEvents = [
+  {
+    title: "Discord Muster",
+    eventType: "community",
+    body: "Drop into the Discord, claim your station, and watch for the first tester role calls.",
+    status: "scheduled",
+    startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+    linkUrl: config.discordInviteUrl
+  },
+  {
+    title: "Systems Briefing",
+    eventType: "briefing",
+    body: "Short public brief covering ship pipeline, aviation goals, HOCAS profile expectations, and test priorities.",
+    status: "scheduled",
+    startsAt: new Date(Date.now() + 14 * 86400000).toISOString(),
+    linkUrl: config.discordInviteUrl
+  },
+  {
+    title: "Closed Ops Window",
+    eventType: "test",
+    body: "First closed operations window for invited community members once the vertical slice is ready.",
+    status: "scheduled",
+    startsAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+    linkUrl: config.discordInviteUrl
+  }
 ];
 
 function baseUrl(req) {
@@ -118,9 +149,32 @@ function discordRedirectUri(req) {
 function publicProducts() {
   return products.map((product) => ({
     ...product,
-    url: product.url || config.discordInviteUrl,
-    linkConfigured: Boolean(product.url)
+    url: product.url,
+    linkConfigured: true
   }));
+}
+
+function formatWorkshopType(value) {
+  const labels = {
+    SCENARIOS_MP: "Multiplayer scenario",
+    MISC: "Utility / framework",
+    TERRAINS: "Terrain",
+    EFFECTS: "Effects",
+    SYSTEMS: "Systems",
+    CHARACTERS: "Character asset",
+    VEHICLES: "Vehicle asset",
+    WEAPONS: "Weapon asset"
+  };
+  if (labels[value]) return labels[value];
+  return String(value || "Workshop")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatCatalogDate(value) {
+  if (!value) return "recently";
+  return new Date(value).toISOString().slice(0, 10);
 }
 
 app.get("/api/community/config", (req, res) => {
@@ -128,6 +182,7 @@ app.get("/api/community/config", (req, res) => {
     discordConfigured: discordConfigured(),
     discordLoginUrl: "/api/discord/login",
     discordInviteUrl: config.discordInviteUrl,
+    workshopCatalogSource,
     products: publicProducts(),
     radio: radioTraffic
   });
@@ -135,6 +190,40 @@ app.get("/api/community/config", (req, res) => {
 
 app.get("/api/community/radio", (req, res) => {
   res.json({ radio: radioTraffic });
+});
+
+app.get("/api/community/feed", async (req, res) => {
+  if (!databaseConfigured) {
+    res.json({ posts: fallbackPosts, events: fallbackEvents });
+    return;
+  }
+
+  const [posts, events] = await Promise.all([
+    query(
+      `
+        SELECT category, title, body, posted_at AS "postedAt"
+        FROM community_posts
+        WHERE status = 'published'
+        ORDER BY posted_at DESC
+        LIMIT 8
+      `
+    ),
+    query(
+      `
+        SELECT title, event_type AS "eventType", body, status,
+               starts_at AS "startsAt", ends_at AS "endsAt", link_url AS "linkUrl"
+        FROM community_events
+        WHERE status IN ('scheduled', 'live')
+        ORDER BY starts_at NULLS LAST, created_at DESC
+        LIMIT 8
+      `
+    )
+  ]);
+
+  res.json({
+    posts: posts.rows.length ? posts.rows : fallbackPosts,
+    events: events.rows.length ? events.rows : fallbackEvents
+  });
 });
 
 app.get("/api/community/session", async (req, res) => {
@@ -150,17 +239,33 @@ app.get("/api/community/session", async (req, res) => {
 
   let checkedInToday = false;
   let questionCount = 0;
+  let checkInCount = 0;
+  let lastCheckIn = null;
   if (databaseConfigured) {
     const checkin = await query(
-      "SELECT id FROM daily_checkins WHERE discord_id = $1 AND checkin_date = current_date LIMIT 1",
+      `
+        SELECT id, checkin_date AS "checkinDate", mood, morale_score AS "moraleScore", note, updated_at AS "updatedAt"
+        FROM daily_checkins
+        WHERE discord_id = $1
+        ORDER BY checkin_date DESC
+        LIMIT 1
+      `,
       [session.discordId]
     );
     const questions = await query(
       "SELECT count(*)::int AS count FROM community_questions WHERE discord_id = $1",
       [session.discordId]
     );
-    checkedInToday = checkin.rowCount > 0;
+    const checkins = await query(
+      "SELECT count(*)::int AS count FROM daily_checkins WHERE discord_id = $1",
+      [session.discordId]
+    );
+    lastCheckIn = checkin.rows[0] || null;
+    checkedInToday = lastCheckIn?.checkinDate
+      ? new Date(lastCheckIn.checkinDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+      : false;
     questionCount = questions.rows[0]?.count || 0;
+    checkInCount = checkins.rows[0]?.count || 0;
   }
 
   res.json({
@@ -174,7 +279,9 @@ app.get("/api/community/session", async (req, res) => {
       avatarUrl: session.avatarUrl
     },
     checkedInToday,
-    questionCount
+    questionCount,
+    checkInCount,
+    lastCheckIn
   });
 });
 
@@ -310,19 +417,28 @@ app.post("/api/community/check-in", requireCommunity, async (req, res) => {
     return;
   }
 
-  const mood = cleanEnum(req.body?.mood, ["on_station", "testing", "watching", "blocked", "other"], "on_station");
+  const mood = cleanEnum(
+    req.body?.mood,
+    ["green", "blue", "amber", "red", "gold", "on_station", "testing", "watching", "blocked", "other"],
+    "green"
+  );
+  const moraleScore = Number.parseInt(req.body?.moraleScore, 10);
+  const cleanMoraleScore = Number.isFinite(moraleScore)
+    ? Math.min(5, Math.max(1, moraleScore))
+    : null;
   const note = cleanText(req.body?.note, "", 300) || null;
   const result = await query(
     `
-      INSERT INTO daily_checkins (discord_id, checkin_date, mood, note, updated_at)
-      VALUES ($1, current_date, $2, $3, now())
+      INSERT INTO daily_checkins (discord_id, checkin_date, mood, morale_score, note, updated_at)
+      VALUES ($1, current_date, $2, $3, $4, now())
       ON CONFLICT (discord_id, checkin_date)
       DO UPDATE SET mood = EXCLUDED.mood,
+                    morale_score = EXCLUDED.morale_score,
                     note = EXCLUDED.note,
                     updated_at = now()
-      RETURNING id, checkin_date AS "checkinDate", mood, note
+      RETURNING id, checkin_date AS "checkinDate", mood, morale_score AS "moraleScore", note
     `,
-    [req.communityUser.discordId, mood, note]
+    [req.communityUser.discordId, mood, cleanMoraleScore, note]
   );
 
   res.json({ ok: true, checkIn: result.rows[0] });
@@ -590,7 +706,8 @@ app.get("/api/admin/community/checkins", requireAdmin, async (req, res) => {
   const result = await query(
     `
       SELECT c.id, c.discord_id AS "discordId", u.global_name AS "globalName",
-             u.username, c.checkin_date AS "checkinDate", c.mood, c.note,
+             u.username, c.checkin_date AS "checkinDate", c.mood,
+             c.morale_score AS "moraleScore", c.note,
              c.created_at AS "createdAt", c.updated_at AS "updatedAt"
       FROM daily_checkins c
       LEFT JOIN community_users u ON u.discord_id = c.discord_id

@@ -278,11 +278,27 @@ function renderCommunity() {
         <article class="activity-item">
           <strong>${escapeHtml(name)}</strong>
           <p>${escapeHtml(item.note || "No note supplied.")}</p>
-          <span class="activity-meta">${escapeHtml(item.mood)} / ${escapeHtml(item.checkinDate)} / ${formatDate(item.updatedAt)}</span>
+          <span class="activity-meta">${escapeHtml(formatMood(item.mood))}${item.moraleScore ? ` / morale ${item.moraleScore}/5` : ""} / ${escapeHtml(item.checkinDate)} / ${formatDate(item.updatedAt)}</span>
         </article>
       `;
     }).join("");
   }
+}
+
+function formatMood(value) {
+  const labels = {
+    green: "green / steady",
+    blue: "blue / quiet",
+    amber: "amber / tired",
+    red: "red / support requested",
+    gold: "gold / hyped",
+    on_station: "on station",
+    testing: "testing build",
+    watching: "watching progress",
+    blocked: "blocked",
+    other: "other"
+  };
+  return labels[value] || value || "unknown";
 }
 
 function renderMods(mods) {

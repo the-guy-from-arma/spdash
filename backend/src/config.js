@@ -47,9 +47,6 @@ export const config = {
   discordRedirectUri: process.env.DISCORD_REDIRECT_URI || "",
   discordInviteUrl: process.env.DISCORD_INVITE_URL || "https://discord.gg/QsGMQh5hwz",
   communitySessionSecret: process.env.COMMUNITY_SESSION_SECRET || "",
-  modProductOneUrl: process.env.MOD_PRODUCT_1_URL || "",
-  modProductTwoUrl: process.env.MOD_PRODUCT_2_URL || "",
-  modProductThreeUrl: process.env.MOD_PRODUCT_3_URL || "",
   serverTtlSeconds: intEnv("SERVER_TTL_SECONDS", 300),
   allowPendingServers: boolEnv("ALLOW_PENDING_SERVERS", false)
 };

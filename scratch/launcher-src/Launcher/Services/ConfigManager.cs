@@ -18,7 +18,7 @@ namespace SeapowerMultiplayer.Launcher.Services
         public int MissileStateHz { get; set; } = 20;
         public int UnitStateHz { get; set; } = 10;
         public string? AcknowledgedVersion { get; set; }
-        public string RegistryUrl { get; set; } = "https://spdash-production.up.railway.app";
+        public string RegistryUrl { get; set; } = "https://tb-studios.up.railway.app";
         public string HostKey { get; set; } = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
         public string ServerName { get; set; } = "Sea Power Fleet";
         public string PublicIp { get; set; } = "";
@@ -71,7 +71,7 @@ namespace SeapowerMultiplayer.Launcher.Services
             if (string.IsNullOrWhiteSpace(Settings.HostKey) || Settings.HostKey.Length < 24)
                 Settings.HostKey = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
             if (string.IsNullOrWhiteSpace(Settings.RegistryUrl))
-                Settings.RegistryUrl = "https://spdash-production.up.railway.app";
+                Settings.RegistryUrl = "https://tb-studios.up.railway.app";
             if (string.IsNullOrWhiteSpace(Settings.ServerName))
                 Settings.ServerName = "Sea Power Fleet";
             if (Settings.MaxPlayers < 1)

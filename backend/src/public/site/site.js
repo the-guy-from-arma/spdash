@@ -27,11 +27,18 @@ const drawerClose = document.querySelector("#drawerClose");
 const communityStatus = document.querySelector("#communityStatus");
 const discordLogin = document.querySelector("#discordLogin");
 const discordLogout = document.querySelector("#discordLogout");
-const drawerUser = document.querySelector("#drawerUser");
+const drawerLoginActions = document.querySelector("#drawerLoginActions");
+const stationConsole = document.querySelector("#stationConsole");
 const drawerAvatar = document.querySelector("#drawerAvatar");
 const drawerName = document.querySelector("#drawerName");
+const stationTag = document.querySelector("#stationTag");
+const stationCheckins = document.querySelector("#stationCheckins");
+const stationQuestions = document.querySelector("#stationQuestions");
+const stationToday = document.querySelector("#stationToday");
+const stationLastCheckin = document.querySelector("#stationLastCheckin");
 const checkinForm = document.querySelector("#checkinForm");
 const checkinMood = document.querySelector("#checkinMood");
+const moraleScore = document.querySelector("#moraleScore");
 const checkinNote = document.querySelector("#checkinNote");
 const checkinStatus = document.querySelector("#checkinStatus");
 const questionForm = document.querySelector("#questionForm");
@@ -39,6 +46,8 @@ const questionText = document.querySelector("#questionText");
 const questionStatus = document.querySelector("#questionStatus");
 const productRail = document.querySelector("#productRail");
 const drawerProducts = document.querySelector("#drawerProducts");
+const postingsFeed = document.querySelector("#postingsFeed");
+const eventsFeed = document.querySelector("#eventsFeed");
 
 const slides = [
   {
@@ -164,6 +173,26 @@ const fallbackRadio = [
   "Air tasking window green for reconnaissance pass.",
   "Amphibious corridor marked, escort package requested.",
   "Radar picket reports intermittent launch bloom beyond horizon."
+];
+
+const fallbackPosts = [
+  {
+    category: "command post",
+    title: "Welcome aboard TBMS",
+    body: "The Community Net opens a personal station for morale checks, questions, events, and studio updates.",
+    postedAt: new Date().toISOString()
+  }
+];
+
+const fallbackEvents = [
+  {
+    title: "Discord Muster",
+    eventType: "community",
+    body: "Join the Discord and watch for tester calls.",
+    status: "scheduled",
+    startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+    linkUrl: "https://discord.gg/QsGMQh5hwz"
+  }
 ];
 
 let communitySession = {
@@ -438,7 +467,19 @@ async function loadCommunitySurface() {
     // Local static previews can still use the fallback radio and product content.
   }
 
+  await loadCommunityFeed();
   await loadCommunitySession();
+}
+
+async function loadCommunityFeed() {
+  try {
+    const response = await fetch("/api/community/feed", { credentials: "same-origin" });
+    if (!response.ok) throw new Error("feed_failed");
+    const data = await response.json();
+    renderFeed(data.posts || fallbackPosts, data.events || fallbackEvents);
+  } catch {
+    renderFeed(fallbackPosts, fallbackEvents);
+  }
 }
 
 async function loadCommunitySession() {
@@ -464,18 +505,24 @@ function renderCommunitySession() {
   if (commandSignal) commandSignal.textContent = isAuthenticated ? "Online" : "Discord";
   if (discordLogin) discordLogin.hidden = isAuthenticated;
   if (discordLogout) discordLogout.hidden = !isAuthenticated;
+  if (drawerLoginActions) drawerLoginActions.classList.toggle("is-authenticated", isAuthenticated);
 
-  if (drawerUser) drawerUser.hidden = !isAuthenticated;
+  if (stationConsole) stationConsole.hidden = !isAuthenticated;
   if (isAuthenticated && communitySession.user) {
     if (drawerName) drawerName.textContent = communitySession.user.globalName || communitySession.user.username;
     if (drawerAvatar) drawerAvatar.src = communitySession.user.avatarUrl || "/assets/tbs-emblem.svg";
+    if (stationTag) stationTag.textContent = `Discord ID ${communitySession.user.discordId}`;
+    if (stationCheckins) stationCheckins.textContent = String(communitySession.checkInCount || 0).padStart(2, "0");
+    if (stationQuestions) stationQuestions.textContent = String(communitySession.questionCount || 0).padStart(2, "0");
+    if (stationToday) stationToday.textContent = communitySession.checkedInToday ? "Logged" : "Open";
+    if (stationLastCheckin) stationLastCheckin.textContent = formatLastCheckIn(communitySession.lastCheckIn);
   }
 
   if (communityStatus) {
     if (isAuthenticated) {
       communityStatus.textContent = communitySession.checkedInToday
-        ? "Discord linked. Daily check-in already logged for today."
-        : "Discord linked. Daily check-in is open.";
+        ? "Station linked. Morale check logged for today."
+        : "Station linked. Morale check is open.";
     } else if (!isConfigured) {
       communityStatus.textContent = "Discord OAuth is not configured yet. The button opens the public Discord until Railway env vars are added.";
     } else {
@@ -490,6 +537,30 @@ function renderCommunitySession() {
       : "Railway database is not connected yet.";
   if (checkinStatus && formMessage) checkinStatus.textContent = formMessage;
   if (questionStatus && formMessage) questionStatus.textContent = formMessage;
+}
+
+function formatLastCheckIn(checkIn) {
+  if (!checkIn) return "No morale check logged yet.";
+  const mood = formatMood(checkIn.mood);
+  const score = checkIn.moraleScore ? ` / morale ${checkIn.moraleScore}/5` : "";
+  const date = checkIn.checkinDate ? new Date(checkIn.checkinDate).toLocaleDateString() : "recent";
+  return `Last check: ${mood}${score} / ${date}`;
+}
+
+function formatMood(value) {
+  const labels = {
+    green: "green / steady",
+    blue: "blue / quiet",
+    amber: "amber / tired",
+    red: "red / support requested",
+    gold: "gold / hyped",
+    on_station: "on station",
+    testing: "testing build",
+    watching: "watching progress",
+    blocked: "blocked",
+    other: "other"
+  };
+  return labels[value] || value || "unknown";
 }
 
 function renderRadio(messages) {
@@ -508,45 +579,188 @@ function renderProducts(products) {
   if (!products.length) return;
 
   if (productRail) {
-    productRail.querySelectorAll(".product-item").forEach((item, index) => {
-      const product = products[index];
-      if (!product) return;
-      const type = item.querySelector("span");
-      const title = item.querySelector("strong");
-      const copy = item.querySelector("p");
-      const link = item.querySelector(".product-link");
-      if (type) type.textContent = `${product.type} / ${product.status}`;
-      if (title) title.textContent = product.title;
-      if (copy) copy.textContent = product.copy;
-      if (link) {
-        link.href = product.url;
-        link.textContent = product.linkConfigured ? "Open Product" : "Follow Updates";
-      }
-    });
-  }
+    productRail.innerHTML = "";
 
-  if (drawerProducts) {
-    drawerProducts.innerHTML = "";
-    products.slice(0, 3).forEach((product) => {
+    const typeCount = new Set(products.map((product) => product.type).filter(Boolean)).size;
+    const updateDates = products
+      .map((product) => product.updatedAt)
+      .filter(Boolean)
+      .sort();
+    const latest = updateDates[updateDates.length - 1];
+
+    const summary = document.createElement("div");
+    summary.className = "catalog-summary";
+
+    const summaryKicker = document.createElement("span");
+    summaryKicker.textContent = "Official Workshop Index";
+
+    const summaryTitle = document.createElement("strong");
+    summaryTitle.textContent = `${String(products.length).padStart(2, "0")} published studio releases`;
+
+    const summaryCopy = document.createElement("p");
+    summaryCopy.textContent = `${typeCount} release categories tracked. Latest catalog update ${formatCatalogDate(latest)}.`;
+
+    summary.append(summaryKicker, summaryTitle, summaryCopy);
+    productRail.append(summary);
+
+    products.forEach((product, index) => {
       const article = document.createElement("article");
-      article.className = "drawer-product";
+      article.className = "product-item";
+
+      const itemNumber = document.createElement("span");
+      itemNumber.className = "product-index";
+      itemNumber.textContent = String(index + 1).padStart(2, "0");
+
+      const body = document.createElement("div");
+      body.className = "product-body";
+
+      const meta = document.createElement("span");
+      meta.className = "product-meta";
+      meta.textContent = `${formatProductKind(product.type)} / ${formatProductVersion(product)} / ${formatCatalogDate(product.updatedAt)}`;
 
       const title = document.createElement("strong");
       title.textContent = product.title;
 
       const copy = document.createElement("p");
-      copy.textContent = product.copy;
+      copy.textContent = product.copy || "Published Workshop release by Thunder Buddies Studios.";
+
+      const id = document.createElement("small");
+      id.textContent = `Workshop ID ${product.id}`;
+
+      body.append(meta, title, copy, id);
+
+      const actions = document.createElement("div");
+      actions.className = "product-actions";
 
       const link = document.createElement("a");
       link.className = "text-action small";
       link.href = product.url;
       link.rel = "noreferrer";
-      link.textContent = product.linkConfigured ? "Open Page" : "Follow Updates";
+      link.textContent = product.linkConfigured ? "Open Workshop" : "Follow Updates";
 
-      article.append(title, copy, link);
+      actions.append(link);
+      article.append(itemNumber, body, actions);
+      productRail.append(article);
+    });
+  }
+
+  if (drawerProducts) {
+    drawerProducts.innerHTML = "";
+
+    const summary = document.createElement("p");
+    summary.className = "drawer-copy";
+    summary.textContent = `${products.length} published Workshop releases indexed.`;
+    drawerProducts.append(summary);
+
+    products.forEach((product) => {
+      const article = document.createElement("article");
+      article.className = "drawer-product";
+
+      const meta = document.createElement("span");
+      meta.textContent = `${formatProductKind(product.type)} / ${formatProductVersion(product)}`;
+
+      const title = document.createElement("strong");
+      title.textContent = product.title;
+
+      const copy = document.createElement("p");
+      copy.textContent = `Updated ${formatCatalogDate(product.updatedAt)} / ${product.id}`;
+
+      const link = document.createElement("a");
+      link.className = "text-action small";
+      link.href = product.url;
+      link.rel = "noreferrer";
+      link.textContent = product.linkConfigured ? "Open Workshop" : "Follow Updates";
+
+      article.append(meta, title, copy, link);
       drawerProducts.append(article);
     });
   }
+}
+
+function formatProductKind(value) {
+  const labels = {
+    SCENARIOS_MP: "Multiplayer scenario",
+    MISC: "Utility / framework",
+    TERRAINS: "Terrain",
+    EFFECTS: "Effects",
+    SYSTEMS: "Systems",
+    CHARACTERS: "Character asset",
+    VEHICLES: "Vehicle asset",
+    WEAPONS: "Weapon asset"
+  };
+  if (labels[value]) return labels[value];
+  return String(value || "Workshop")
+    .replaceAll("_", " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatProductVersion(product) {
+  const value = product.status || (product.version ? `v${product.version}` : "published");
+  if (value === "published") return value;
+  return String(value).startsWith("v") ? value : `v${value}`;
+}
+
+function formatCatalogDate(value) {
+  if (!value) return "recently";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "recently";
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+}
+
+function renderFeed(posts, events) {
+  if (postingsFeed) {
+    postingsFeed.innerHTML = "";
+    (posts.length ? posts : fallbackPosts).slice(0, 5).forEach((post) => {
+      const article = document.createElement("article");
+      article.className = "feed-line";
+
+      const meta = document.createElement("span");
+      meta.textContent = `${post.category || "post"} / ${formatShortDate(post.postedAt)}`;
+
+      const title = document.createElement("strong");
+      title.textContent = post.title;
+
+      const body = document.createElement("p");
+      body.textContent = post.body;
+
+      article.append(meta, title, body);
+      postingsFeed.append(article);
+    });
+  }
+
+  if (eventsFeed) {
+    eventsFeed.innerHTML = "";
+    (events.length ? events : fallbackEvents).slice(0, 5).forEach((event) => {
+      const article = document.createElement("article");
+      article.className = "event-line";
+
+      const meta = document.createElement("span");
+      meta.textContent = `${event.eventType || "event"} / ${event.status || "scheduled"} / ${formatShortDate(event.startsAt)}`;
+
+      const title = document.createElement("strong");
+      title.textContent = event.title;
+
+      const body = document.createElement("p");
+      body.textContent = event.body;
+
+      article.append(meta, title, body);
+      if (event.linkUrl) {
+        const link = document.createElement("a");
+        link.className = "text-action small";
+        link.href = event.linkUrl;
+        link.rel = "noreferrer";
+        link.textContent = "Open Brief";
+        article.append(link);
+      }
+      eventsFeed.append(article);
+    });
+  }
+}
+
+function formatShortDate(value) {
+  if (!value) return "TBD";
+  return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 async function submitCheckIn(event) {
@@ -564,6 +778,7 @@ async function submitCheckIn(event) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       mood: checkinMood?.value || "on_station",
+      moraleScore: moraleScore?.value || "",
       note: checkinNote?.value || ""
     })
   }).catch(() => null);

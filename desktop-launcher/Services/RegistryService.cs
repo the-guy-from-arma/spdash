@@ -72,7 +72,7 @@ namespace SeapowerMultiplayer.Launcher.Services
         public static string NormalizeBaseUrl(string registryUrl)
         {
             var value = string.IsNullOrWhiteSpace(registryUrl)
-                ? "https://spdash-production.up.railway.app"
+                ? "https://tb-studios.up.railway.app"
                 : registryUrl.Trim();
             return value.TrimEnd('/');
         }
