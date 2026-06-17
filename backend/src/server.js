@@ -1,16 +1,6 @@
 import express from "express";
 import { fileURLToPath } from "node:url";
 import { config, requireRuntimeConfig } from "./config.js";
-import {
-  clearCommunitySessionCookie,
-  clearDiscordStateCookie,
-  createCommunitySessionCookie,
-  createDiscordStateCookie,
-  discordAvatarUrl,
-  readCommunitySession,
-  requireCommunity,
-  validateDiscordState
-} from "./community-auth.js";
 import { closeDb, databaseConfigured, migrate, query } from "./db.js";
 import {
   clearAdminSessionCookie,
@@ -19,7 +9,7 @@ import {
   isValidAdminLogin,
   requireAdmin
 } from "./auth.js";
-import { cleanEnum, cleanText, validateHeartbeat } from "./validation.js";
+import { cleanCount, cleanText, validateHeartbeat } from "./validation.js";
 import { workshopCatalog, workshopCatalogSource } from "./workshop-catalog.js";
 
 requireRuntimeConfig();
@@ -80,71 +70,27 @@ const radioTraffic = [
   "Air tasking window green for reconnaissance pass.",
   "Amphibious corridor marked, escort package requested.",
   "Radar picket reports intermittent launch bloom beyond horizon.",
-  "Logistics channel requests daily check-in from all station members.",
+  "Project telemetry reports six-month launch clock active.",
+  "QA channel reports bug triage board synchronized.",
   "Workshop catalog synchronized from official Thunder Buddies listings."
 ];
 
-const fallbackPosts = [
-  {
-    category: "command post",
-    title: "Welcome aboard TBMS",
-    body: "The Community Net is live. Discord sign-in opens a personal station with questions, check-ins, events, and studio postings.",
-    postedAt: new Date().toISOString()
-  },
-  {
-    category: "development",
-    title: "Theater scope is being locked",
-    body: "Current focus is ship roles, aircraft tasking, sea-lane purpose, and a clean first public release path.",
-    postedAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    category: "testing",
-    title: "Closed test prep",
-    body: "Early test windows will prioritize stability, readable naval objectives, and the first pass of player feedback.",
-    postedAt: new Date(Date.now() - 172800000).toISOString()
-  }
-];
-
-const fallbackEvents = [
-  {
-    title: "Discord Muster",
-    eventType: "community",
-    body: "Drop into the Discord, claim your station, and watch for the first tester role calls.",
-    status: "scheduled",
-    startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-    linkUrl: config.discordInviteUrl
-  },
-  {
-    title: "Systems Briefing",
-    eventType: "briefing",
-    body: "Short public brief covering ship pipeline, aviation goals, HOCAS profile expectations, and test priorities.",
-    status: "scheduled",
-    startsAt: new Date(Date.now() + 14 * 86400000).toISOString(),
-    linkUrl: config.discordInviteUrl
-  },
-  {
-    title: "Closed Ops Window",
-    eventType: "test",
-    body: "First closed operations window for invited community members once the vertical slice is ready.",
-    status: "scheduled",
-    startsAt: new Date(Date.now() + 30 * 86400000).toISOString(),
-    linkUrl: config.discordInviteUrl
-  }
-];
-
-function baseUrl(req) {
-  if (config.publicBaseUrl) return config.publicBaseUrl.replace(/\/$/, "");
-  const proto = req.get("x-forwarded-proto") || req.protocol || "http";
-  return `${proto}://${req.get("host")}`;
-}
-
-function discordConfigured() {
-  return Boolean(config.discordClientId && config.discordClientSecret);
-}
-
-function discordRedirectUri(req) {
-  return config.discordRedirectUri || `${baseUrl(req)}/api/discord/callback`;
-}
+const fallbackProgress = {
+  launchTargetAt: "2026-12-17T17:00:00.000Z",
+  currentPhase: "Systems Integration",
+  buildLabel: "TBMS WIP 0.0.1",
+  progressPercent: 22,
+  bugsFixed: 18,
+  bugsRemaining: 42,
+  shipsImported: 6,
+  shipSystemsOnline: 4,
+  aircraftProfiles: 3,
+  scenariosReady: 2,
+  testPasses: 11,
+  blockers: 5,
+  commanderNote: "Six-month production clock is active. Current work is focused on ship handling, weapons behavior, scenario structure, and clean public release pacing.",
+  updatedAt: new Date().toISOString()
+};
 
 function publicProducts() {
   return products.map((product) => ({
@@ -152,6 +98,83 @@ function publicProducts() {
     url: product.url,
     linkConfigured: true
   }));
+}
+
+async function publicProjectProgress() {
+  if (!databaseConfigured) return fallbackProgress;
+  const result = await query(
+    `
+      SELECT launch_target_at AS "launchTargetAt",
+             current_phase AS "currentPhase",
+             build_label AS "buildLabel",
+             progress_percent AS "progressPercent",
+             bugs_fixed AS "bugsFixed",
+             bugs_remaining AS "bugsRemaining",
+             ships_imported AS "shipsImported",
+             ship_systems_online AS "shipSystemsOnline",
+             aircraft_profiles AS "aircraftProfiles",
+             scenarios_ready AS "scenariosReady",
+             test_passes AS "testPasses",
+             blockers,
+             commander_note AS "commanderNote",
+             updated_at AS "updatedAt"
+      FROM project_progress
+      WHERE id = 1
+      LIMIT 1
+    `
+  );
+
+  return result.rows[0] ? normalizeProgressForPublic(result.rows[0]) : fallbackProgress;
+}
+
+function normalizeProgressForPublic(progress) {
+  return {
+    launchTargetAt: toIso(progress.launchTargetAt) || fallbackProgress.launchTargetAt,
+    currentPhase: progress.currentPhase || fallbackProgress.currentPhase,
+    buildLabel: progress.buildLabel || fallbackProgress.buildLabel,
+    progressPercent: cleanCount(progress.progressPercent, fallbackProgress.progressPercent, 0, 100),
+    bugsFixed: cleanCount(progress.bugsFixed, fallbackProgress.bugsFixed, 0, 99999),
+    bugsRemaining: cleanCount(progress.bugsRemaining, fallbackProgress.bugsRemaining, 0, 99999),
+    shipsImported: cleanCount(progress.shipsImported, fallbackProgress.shipsImported, 0, 99999),
+    shipSystemsOnline: cleanCount(progress.shipSystemsOnline, fallbackProgress.shipSystemsOnline, 0, 99999),
+    aircraftProfiles: cleanCount(progress.aircraftProfiles, fallbackProgress.aircraftProfiles, 0, 99999),
+    scenariosReady: cleanCount(progress.scenariosReady, fallbackProgress.scenariosReady, 0, 99999),
+    testPasses: cleanCount(progress.testPasses, fallbackProgress.testPasses, 0, 99999),
+    blockers: cleanCount(progress.blockers, fallbackProgress.blockers, 0, 99999),
+    commanderNote: progress.commanderNote || fallbackProgress.commanderNote,
+    updatedAt: toIso(progress.updatedAt) || new Date().toISOString()
+  };
+}
+
+function normalizeProgressInput(body) {
+  return {
+    launchTargetAt: cleanLaunchTarget(body.launchTargetAt),
+    currentPhase: cleanText(body.currentPhase, fallbackProgress.currentPhase, 80),
+    buildLabel: cleanText(body.buildLabel, fallbackProgress.buildLabel, 80),
+    progressPercent: cleanCount(body.progressPercent, fallbackProgress.progressPercent, 0, 100),
+    bugsFixed: cleanCount(body.bugsFixed, fallbackProgress.bugsFixed, 0, 99999),
+    bugsRemaining: cleanCount(body.bugsRemaining, fallbackProgress.bugsRemaining, 0, 99999),
+    shipsImported: cleanCount(body.shipsImported, fallbackProgress.shipsImported, 0, 99999),
+    shipSystemsOnline: cleanCount(body.shipSystemsOnline, fallbackProgress.shipSystemsOnline, 0, 99999),
+    aircraftProfiles: cleanCount(body.aircraftProfiles, fallbackProgress.aircraftProfiles, 0, 99999),
+    scenariosReady: cleanCount(body.scenariosReady, fallbackProgress.scenariosReady, 0, 99999),
+    testPasses: cleanCount(body.testPasses, fallbackProgress.testPasses, 0, 99999),
+    blockers: cleanCount(body.blockers, fallbackProgress.blockers, 0, 99999),
+    commanderNote: cleanText(body.commanderNote, fallbackProgress.commanderNote, 700)
+  };
+}
+
+function cleanLaunchTarget(value) {
+  const fallback = new Date(fallbackProgress.launchTargetAt);
+  if (typeof value !== "string") return fallback;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? fallback : date;
+}
+
+function toIso(value) {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
 function formatWorkshopType(value) {
@@ -177,271 +200,17 @@ function formatCatalogDate(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
 
-app.get("/api/community/config", (req, res) => {
+app.get("/api/showcase/config", async (req, res) => {
   res.json({
-    discordConfigured: discordConfigured(),
-    discordLoginUrl: "/api/discord/login",
-    discordInviteUrl: config.discordInviteUrl,
     workshopCatalogSource,
     products: publicProducts(),
+    progress: await publicProjectProgress(),
     radio: radioTraffic
   });
 });
 
-app.get("/api/community/radio", (req, res) => {
-  res.json({ radio: radioTraffic });
-});
-
-app.get("/api/community/feed", async (req, res) => {
-  if (!databaseConfigured) {
-    res.json({ posts: fallbackPosts, events: fallbackEvents });
-    return;
-  }
-
-  const [posts, events] = await Promise.all([
-    query(
-      `
-        SELECT category, title, body, posted_at AS "postedAt"
-        FROM community_posts
-        WHERE status = 'published'
-        ORDER BY posted_at DESC
-        LIMIT 8
-      `
-    ),
-    query(
-      `
-        SELECT title, event_type AS "eventType", body, status,
-               starts_at AS "startsAt", ends_at AS "endsAt", link_url AS "linkUrl"
-        FROM community_events
-        WHERE status IN ('scheduled', 'live')
-        ORDER BY starts_at NULLS LAST, created_at DESC
-        LIMIT 8
-      `
-    )
-  ]);
-
-  res.json({
-    posts: posts.rows.length ? posts.rows : fallbackPosts,
-    events: events.rows.length ? events.rows : fallbackEvents
-  });
-});
-
-app.get("/api/community/session", async (req, res) => {
-  const session = readCommunitySession(req);
-  if (!session) {
-    res.json({
-      authenticated: false,
-      discordConfigured: discordConfigured(),
-      databaseConfigured
-    });
-    return;
-  }
-
-  let checkedInToday = false;
-  let questionCount = 0;
-  let checkInCount = 0;
-  let lastCheckIn = null;
-  if (databaseConfigured) {
-    const checkin = await query(
-      `
-        SELECT id, checkin_date AS "checkinDate", mood, morale_score AS "moraleScore", note, updated_at AS "updatedAt"
-        FROM daily_checkins
-        WHERE discord_id = $1
-        ORDER BY checkin_date DESC
-        LIMIT 1
-      `,
-      [session.discordId]
-    );
-    const questions = await query(
-      "SELECT count(*)::int AS count FROM community_questions WHERE discord_id = $1",
-      [session.discordId]
-    );
-    const checkins = await query(
-      "SELECT count(*)::int AS count FROM daily_checkins WHERE discord_id = $1",
-      [session.discordId]
-    );
-    lastCheckIn = checkin.rows[0] || null;
-    checkedInToday = lastCheckIn?.checkinDate
-      ? new Date(lastCheckIn.checkinDate).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
-      : false;
-    questionCount = questions.rows[0]?.count || 0;
-    checkInCount = checkins.rows[0]?.count || 0;
-  }
-
-  res.json({
-    authenticated: true,
-    discordConfigured: discordConfigured(),
-    databaseConfigured,
-    user: {
-      discordId: session.discordId,
-      username: session.username,
-      globalName: session.globalName,
-      avatarUrl: session.avatarUrl
-    },
-    checkedInToday,
-    questionCount,
-    checkInCount,
-    lastCheckIn
-  });
-});
-
-app.get("/api/discord/login", (req, res) => {
-  if (!discordConfigured()) {
-    res.redirect(config.discordInviteUrl);
-    return;
-  }
-
-  const { state, cookie } = createDiscordStateCookie();
-  const params = new URLSearchParams({
-    client_id: config.discordClientId,
-    redirect_uri: discordRedirectUri(req),
-    response_type: "code",
-    scope: "identify",
-    state
-  });
-
-  res.setHeader("Set-Cookie", cookie);
-  res.redirect(`https://discord.com/oauth2/authorize?${params.toString()}`);
-});
-
-app.get("/api/discord/callback", async (req, res) => {
-  if (!discordConfigured()) {
-    res.redirect("/?community=discord-not-configured");
-    return;
-  }
-
-  const code = typeof req.query.code === "string" ? req.query.code : "";
-  const state = typeof req.query.state === "string" ? req.query.state : "";
-  if (!code || !validateDiscordState(req, state)) {
-    res.setHeader("Set-Cookie", clearDiscordStateCookie());
-    res.redirect("/?community=discord-state-failed");
-    return;
-  }
-
-  try {
-    const tokenResponse = await fetch("https://discord.com/api/oauth2/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: config.discordClientId,
-        client_secret: config.discordClientSecret,
-        grant_type: "authorization_code",
-        code,
-        redirect_uri: discordRedirectUri(req)
-      })
-    });
-
-    if (!tokenResponse.ok) throw new Error("discord_token_exchange_failed");
-    const token = await tokenResponse.json();
-
-    const userResponse = await fetch("https://discord.com/api/users/@me", {
-      headers: { Authorization: `Bearer ${token.access_token}` }
-    });
-    if (!userResponse.ok) throw new Error("discord_user_fetch_failed");
-    const discordUser = await userResponse.json();
-
-    const user = {
-      discordId: discordUser.id,
-      username: discordUser.username,
-      globalName: discordUser.global_name || discordUser.username,
-      avatarUrl: discordAvatarUrl(discordUser)
-    };
-
-    if (databaseConfigured) {
-      await query(
-        `
-          INSERT INTO community_users (discord_id, username, global_name, avatar_url, raw_profile, last_login, updated_at)
-          VALUES ($1, $2, $3, $4, $5::jsonb, now(), now())
-          ON CONFLICT (discord_id)
-          DO UPDATE SET
-            username = EXCLUDED.username,
-            global_name = EXCLUDED.global_name,
-            avatar_url = EXCLUDED.avatar_url,
-            raw_profile = EXCLUDED.raw_profile,
-            last_login = now(),
-            updated_at = now()
-        `,
-        [user.discordId, user.username, user.globalName, user.avatarUrl, JSON.stringify(discordUser)]
-      );
-    }
-
-    res.setHeader("Set-Cookie", [
-      clearDiscordStateCookie(),
-      createCommunitySessionCookie(user)
-    ]);
-    res.redirect("/?community=connected");
-  } catch (error) {
-    console.error(error);
-    res.setHeader("Set-Cookie", clearDiscordStateCookie());
-    res.redirect("/?community=discord-failed");
-  }
-});
-
-app.post("/api/community/logout", (req, res) => {
-  res.setHeader("Set-Cookie", clearCommunitySessionCookie());
-  res.json({ ok: true });
-});
-
-app.post("/api/community/questions", requireCommunity, async (req, res) => {
-  if (!databaseConfigured) {
-    res.status(503).json({ error: "database_not_configured" });
-    return;
-  }
-
-  const question = cleanText(req.body?.question, "", 900);
-  if (question.length < 12) {
-    res.status(400).json({ error: "question_too_short" });
-    return;
-  }
-
-  const displayName = cleanText(
-    req.communityUser.globalName || req.communityUser.username,
-    "Discord user",
-    80
-  );
-  const result = await query(
-    `
-      INSERT INTO community_questions (discord_id, display_name, question)
-      VALUES ($1, $2, $3)
-      RETURNING id, created_at AS "createdAt"
-    `,
-    [req.communityUser.discordId, displayName, question]
-  );
-
-  res.json({ ok: true, question: result.rows[0] });
-});
-
-app.post("/api/community/check-in", requireCommunity, async (req, res) => {
-  if (!databaseConfigured) {
-    res.status(503).json({ error: "database_not_configured" });
-    return;
-  }
-
-  const mood = cleanEnum(
-    req.body?.mood,
-    ["green", "blue", "amber", "red", "gold", "on_station", "testing", "watching", "blocked", "other"],
-    "green"
-  );
-  const moraleScore = Number.parseInt(req.body?.moraleScore, 10);
-  const cleanMoraleScore = Number.isFinite(moraleScore)
-    ? Math.min(5, Math.max(1, moraleScore))
-    : null;
-  const note = cleanText(req.body?.note, "", 300) || null;
-  const result = await query(
-    `
-      INSERT INTO daily_checkins (discord_id, checkin_date, mood, morale_score, note, updated_at)
-      VALUES ($1, current_date, $2, $3, $4, now())
-      ON CONFLICT (discord_id, checkin_date)
-      DO UPDATE SET mood = EXCLUDED.mood,
-                    morale_score = EXCLUDED.morale_score,
-                    note = EXCLUDED.note,
-                    updated_at = now()
-      RETURNING id, checkin_date AS "checkinDate", mood, morale_score AS "moraleScore", note
-    `,
-    [req.communityUser.discordId, mood, cleanMoraleScore, note]
-  );
-
-  res.json({ ok: true, checkIn: result.rows[0] });
+app.get("/api/project/progress", async (req, res) => {
+  res.json({ progress: await publicProjectProgress() });
 });
 
 app.get("/api/servers", async (req, res) => {
@@ -611,6 +380,80 @@ app.post("/api/admin/logout", (req, res) => {
   res.json({ ok: true });
 });
 
+app.get("/api/admin/progress", requireAdmin, async (req, res) => {
+  res.json({
+    databaseConfigured,
+    progress: await publicProjectProgress()
+  });
+});
+
+app.put("/api/admin/progress", requireAdmin, async (req, res) => {
+  if (!databaseConfigured) {
+    res.status(503).json({ error: "database_not_configured" });
+    return;
+  }
+
+  const progress = normalizeProgressInput(req.body || {});
+  const result = await query(
+    `
+      INSERT INTO project_progress (
+        id, launch_target_at, current_phase, build_label, progress_percent,
+        bugs_fixed, bugs_remaining, ships_imported, ship_systems_online,
+        aircraft_profiles, scenarios_ready, test_passes, blockers,
+        commander_note, updated_at
+      )
+      VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, now())
+      ON CONFLICT (id)
+      DO UPDATE SET
+        launch_target_at = EXCLUDED.launch_target_at,
+        current_phase = EXCLUDED.current_phase,
+        build_label = EXCLUDED.build_label,
+        progress_percent = EXCLUDED.progress_percent,
+        bugs_fixed = EXCLUDED.bugs_fixed,
+        bugs_remaining = EXCLUDED.bugs_remaining,
+        ships_imported = EXCLUDED.ships_imported,
+        ship_systems_online = EXCLUDED.ship_systems_online,
+        aircraft_profiles = EXCLUDED.aircraft_profiles,
+        scenarios_ready = EXCLUDED.scenarios_ready,
+        test_passes = EXCLUDED.test_passes,
+        blockers = EXCLUDED.blockers,
+        commander_note = EXCLUDED.commander_note,
+        updated_at = now()
+      RETURNING launch_target_at AS "launchTargetAt",
+                current_phase AS "currentPhase",
+                build_label AS "buildLabel",
+                progress_percent AS "progressPercent",
+                bugs_fixed AS "bugsFixed",
+                bugs_remaining AS "bugsRemaining",
+                ships_imported AS "shipsImported",
+                ship_systems_online AS "shipSystemsOnline",
+                aircraft_profiles AS "aircraftProfiles",
+                scenarios_ready AS "scenariosReady",
+                test_passes AS "testPasses",
+                blockers,
+                commander_note AS "commanderNote",
+                updated_at AS "updatedAt"
+    `,
+    [
+      progress.launchTargetAt,
+      progress.currentPhase,
+      progress.buildLabel,
+      progress.progressPercent,
+      progress.bugsFixed,
+      progress.bugsRemaining,
+      progress.shipsImported,
+      progress.shipSystemsOnline,
+      progress.aircraftProfiles,
+      progress.scenariosReady,
+      progress.testPasses,
+      progress.blockers,
+      progress.commanderNote
+    ]
+  );
+
+  res.json({ ok: true, progress: normalizeProgressForPublic(result.rows[0]) });
+});
+
 app.get("/api/admin/servers", requireAdmin, async (req, res) => {
   const result = await query(
     `
@@ -664,58 +507,6 @@ app.post("/api/admin/servers/:id/status", requireAdmin, async (req, res) => {
 app.delete("/api/admin/servers/:id", requireAdmin, async (req, res) => {
   await query("DELETE FROM servers WHERE id = $1", [req.params.id]);
   res.json({ ok: true });
-});
-
-app.get("/api/admin/community/questions", requireAdmin, async (req, res) => {
-  const result = await query(
-    `
-      SELECT id, discord_id AS "discordId", display_name AS "displayName",
-             question, status, created_at AS "createdAt"
-      FROM community_questions
-      ORDER BY created_at DESC
-      LIMIT 120
-    `
-  );
-  res.json({ questions: result.rows });
-});
-
-app.post("/api/admin/community/questions/:id/status", requireAdmin, async (req, res) => {
-  const status = cleanEnum(req.body?.status, ["new", "reviewed", "answered", "archived"], "");
-  if (!status) {
-    res.status(400).json({ error: "invalid_status" });
-    return;
-  }
-
-  const result = await query(
-    `
-      UPDATE community_questions
-      SET status = $1
-      WHERE id = $2
-      RETURNING id, status
-    `,
-    [status, req.params.id]
-  );
-  if (result.rowCount === 0) {
-    res.status(404).json({ error: "not_found" });
-    return;
-  }
-  res.json({ ok: true, question: result.rows[0] });
-});
-
-app.get("/api/admin/community/checkins", requireAdmin, async (req, res) => {
-  const result = await query(
-    `
-      SELECT c.id, c.discord_id AS "discordId", u.global_name AS "globalName",
-             u.username, c.checkin_date AS "checkinDate", c.mood,
-             c.morale_score AS "moraleScore", c.note,
-             c.created_at AS "createdAt", c.updated_at AS "updatedAt"
-      FROM daily_checkins c
-      LEFT JOIN community_users u ON u.discord_id = c.discord_id
-      ORDER BY c.checkin_date DESC, c.updated_at DESC
-      LIMIT 160
-    `
-  );
-  res.json({ checkins: result.rows });
 });
 
 app.use((err, req, res, next) => {

@@ -96,6 +96,7 @@
 
       <div class="hero-status" aria-hidden="true">
         <span>WIP</span>
+        <span id="heroCountdown">Launch clock syncing</span>
         <span>Surface warfare</span>
         <span>Air tasking</span>
         <span>Test channel</span>
@@ -213,7 +214,7 @@
               <strong>Movement, weapons, sensors, and controls</strong>
               <p>Test ship handling, missile behavior, helicopter support, jet operations, HOCAS-compatible profiles, replication, dedicated-server behavior, and performance under scenario load.</p>
             </li>
-            <li class="road-phase reveal" data-month="Month 05" data-summary="Closed Discord tests and balance correction.">
+            <li class="road-phase reveal" data-month="Month 05" data-summary="Closed community tests and balance correction.">
               <span>Month 05 / Closed community trials</span>
               <strong>Closed operations and balance passes</strong>
               <p>Run trusted playtests for navigation clarity, mission pacing, stability, survivability, weapon ranges, logistics pressure, spawn logic, objective value, and replayable naval fights.</p>
@@ -296,8 +297,8 @@
     </main>
 
     <button class="command-tab" id="commandTab" type="button" aria-controls="commandDrawer" aria-expanded="false">
-      <span>Community Net</span>
-      <strong id="commandSignal">Discord</strong>
+      <span>Project Telemetry</span>
+      <strong id="commandSignal">WIP</strong>
     </button>
     <div class="drawer-scrim" id="drawerScrim" hidden></div>
     <aside class="command-drawer" id="commandDrawer" aria-hidden="true" aria-labelledby="commandTitle">
@@ -305,87 +306,73 @@
       <header class="drawer-header">
         <div>
           <p class="eyebrow">Right console</p>
-          <h2 id="commandTitle">Community Net</h2>
+          <h2 id="commandTitle">Project Telemetry</h2>
         </div>
         <button class="drawer-close" id="drawerClose" type="button">Close</button>
       </header>
 
-      <p class="drawer-status" id="communityStatus">Checking Discord link...</p>
+      <p class="drawer-status" id="communityStatus">Loading owner-published project telemetry...</p>
 
-      <div class="drawer-actions" id="drawerLoginActions">
-        <a class="text-action primary" id="discordLogin" href="/api/discord/login">Login With Discord</a>
-        <button class="text-action small" id="discordLogout" type="button" hidden>Logout</button>
-      </div>
-
-      <section class="station-console" id="stationConsole" hidden>
-        <div class="station-identity">
-          <img id="drawerAvatar" src="/assets/tbs-emblem.svg" alt="">
+      <section class="telemetry-console" id="progressConsole">
+        <div class="telemetry-head">
           <div>
-            <span>Personal station</span>
-            <strong id="drawerName">Discord user</strong>
-            <small id="stationTag">Awaiting account sync</small>
+            <span>Launch clock</span>
+            <strong id="progressBuildLabel">TBMS WIP 0.0.1</strong>
+            <small id="progressPhase">Systems Integration</small>
+          </div>
+          <div class="progress-orbit" aria-hidden="true"><span id="progressOrbitFill"></span></div>
+        </div>
+        <div class="countdown-grid" aria-label="Launch countdown">
+          <div>
+            <span>Days</span>
+            <strong id="countdownDays">000</strong>
+          </div>
+          <div>
+            <span>Hours</span>
+            <strong id="countdownHours">00</strong>
+          </div>
+          <div>
+            <span>Minutes</span>
+            <strong id="countdownMinutes">00</strong>
+          </div>
+          <div>
+            <span>Seconds</span>
+            <strong id="countdownSeconds">00</strong>
           </div>
         </div>
-        <div class="station-readout">
-          <div>
-            <span>Check-ins</span>
-            <strong id="stationCheckins">00</strong>
-          </div>
-          <div>
-            <span>Questions</span>
-            <strong id="stationQuestions">00</strong>
-          </div>
-          <div>
-            <span>Today</span>
-            <strong id="stationToday">Open</strong>
-          </div>
-        </div>
-        <p id="stationLastCheckin">No morale check logged yet.</p>
-      </section>
-
-      <section class="drawer-section morale-section">
-        <span>Morale check</span>
-        <p class="drawer-copy">A quick daily station check. Not a report card, just a pulse for the team.</p>
-        <form id="checkinForm">
-          <label for="checkinMood">How are you arriving today?</label>
-          <select id="checkinMood" name="mood">
-            <option value="green">Green / steady</option>
-            <option value="blue">Blue / quiet but here</option>
-            <option value="amber">Amber / tired</option>
-            <option value="red">Red / need support</option>
-            <option value="gold">Gold / hyped for ops</option>
-          </select>
-          <label for="moraleScore">Morale level</label>
-          <input id="moraleScore" name="moraleScore" type="range" min="1" max="5" value="4">
-          <label for="checkinNote">Optional note</label>
-          <textarea id="checkinNote" name="note" rows="3" maxlength="300" placeholder="One line for the watch officer."></textarea>
-          <button class="text-action primary" type="submit">Log Morale</button>
-          <p class="form-status" id="checkinStatus"></p>
-        </form>
-      </section>
-
-      <section class="drawer-section">
-        <span>Operations board</span>
-        <div class="ops-feed" id="eventsFeed">
-          <p class="drawer-copy">Events load after the station feed connects.</p>
+        <div class="progress-line">
+          <span id="progressPercentText">22%</span>
+          <div aria-hidden="true"><span id="progressBarFill"></span></div>
         </div>
       </section>
 
       <section class="drawer-section">
-        <span>Command postings</span>
-        <div class="postings-feed" id="postingsFeed">
-          <p class="drawer-copy">Postings load after the station feed connects.</p>
+        <span>Bug board</span>
+        <div class="bug-readout">
+          <div>
+            <span>Fixed</span>
+            <strong id="bugsFixed">18</strong>
+          </div>
+          <div>
+            <span>Remaining</span>
+            <strong id="bugsRemaining">42</strong>
+          </div>
+          <div>
+            <span>Blockers</span>
+            <strong id="blockersCount">05</strong>
+          </div>
         </div>
       </section>
 
-      <section class="drawer-section question-section">
-        <span>Ask the studio</span>
-        <form id="questionForm">
-          <label for="questionText">Question</label>
-          <textarea id="questionText" name="question" rows="5" maxlength="900" placeholder="Ask about testing, systems, release timing, ships, aircraft, or server setup."></textarea>
-          <button class="text-action primary" type="submit">Send Question</button>
-          <p class="form-status" id="questionStatus"></p>
-        </form>
+      <section class="drawer-section">
+        <span>Production stats</span>
+        <div class="telemetry-stats" id="progressStats"></div>
+      </section>
+
+      <section class="drawer-section">
+        <span>Owner note</span>
+        <p class="drawer-copy" id="progressNote">Awaiting owner status update.</p>
+        <p class="drawer-copy" id="progressUpdated">Last updated: pending sync.</p>
       </section>
 
       <section class="drawer-section product-section">

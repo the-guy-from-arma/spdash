@@ -10,12 +10,26 @@ const loginForm = document.querySelector("#loginForm");
 const usernameInput = document.querySelector("#username");
 const passwordInput = document.querySelector("#password");
 const loginMessage = document.querySelector("#loginMessage");
-const questionsBody = document.querySelector("#questionsBody");
-const checkinsBody = document.querySelector("#checkinsBody");
+const progressForm = document.querySelector("#progressForm");
+const progressSaveState = document.querySelector("#progressSaveState");
+const progressFields = {
+  launchTargetAt: document.querySelector("#launchTargetAt"),
+  currentPhase: document.querySelector("#currentPhase"),
+  buildLabel: document.querySelector("#buildLabel"),
+  progressPercent: document.querySelector("#progressPercent"),
+  bugsFixed: document.querySelector("#bugsFixed"),
+  bugsRemaining: document.querySelector("#bugsRemaining"),
+  shipsImported: document.querySelector("#shipsImported"),
+  shipSystemsOnline: document.querySelector("#shipSystemsOnline"),
+  aircraftProfiles: document.querySelector("#aircraftProfiles"),
+  scenariosReady: document.querySelector("#scenariosReady"),
+  testPasses: document.querySelector("#testPasses"),
+  blockers: document.querySelector("#blockers"),
+  commanderNote: document.querySelector("#commanderNote")
+};
 
 let servers = [];
-let questions = [];
-let checkins = [];
+let progress = null;
 let authenticated = false;
 
 loginForm.addEventListener("submit", login);
@@ -23,6 +37,7 @@ logoutButton.addEventListener("click", logout);
 refreshButton.addEventListener("click", loadDashboard);
 filterInput.addEventListener("input", render);
 statusFilter.addEventListener("change", render);
+progressForm.addEventListener("submit", saveProgress);
 
 checkSession();
 
@@ -88,11 +103,10 @@ async function logout() {
   });
   authenticated = false;
   servers = [];
-  questions = [];
-  checkins = [];
+  progress = null;
   setAuthState(false, usernameInput.value.trim() || "owner");
   renderSummary();
-  renderCommunity();
+  renderProgressForm(null);
 }
 
 function setAuthState(isAuthenticated, username) {
@@ -141,23 +155,42 @@ async function loadServers() {
 
 async function loadDashboard() {
   if (!authenticated) return;
-  await Promise.all([loadServers(), loadCommunity()]);
+  await Promise.all([loadServers(), loadProgress()]);
 }
 
-async function loadCommunity() {
+async function loadProgress() {
   if (!authenticated) return;
   try {
-    const [questionData, checkinData] = await Promise.all([
-      api("/api/admin/community/questions"),
-      api("/api/admin/community/checkins")
-    ]);
-    questions = questionData.questions || [];
-    checkins = checkinData.checkins || [];
-    renderCommunity();
+    if (progressSaveState) progressSaveState.textContent = "Loading telemetry...";
+    const data = await api("/api/admin/progress");
+    progress = data.progress || null;
+    renderProgressForm(progress);
+    if (progressSaveState) {
+      progressSaveState.textContent = data.databaseConfigured
+        ? `Synced ${formatDate(progress?.updatedAt)}`
+        : "Database not connected; showing fallback";
+    }
   } catch (error) {
-    const message = escapeHtml(cleanError(error.message));
-    questionsBody.innerHTML = `<p class="empty">${message}</p>`;
-    checkinsBody.innerHTML = `<p class="empty">${message}</p>`;
+    if (progressSaveState) progressSaveState.textContent = cleanError(error.message);
+  }
+}
+
+async function saveProgress(event) {
+  event.preventDefault();
+  if (!authenticated) return;
+  if (progressSaveState) progressSaveState.textContent = "Publishing...";
+
+  try {
+    const payload = readProgressForm();
+    const data = await api("/api/admin/progress", {
+      method: "PUT",
+      body: JSON.stringify(payload)
+    });
+    progress = data.progress;
+    renderProgressForm(progress);
+    if (progressSaveState) progressSaveState.textContent = `Published ${formatDate(progress.updatedAt)}`;
+  } catch (error) {
+    if (progressSaveState) progressSaveState.textContent = cleanError(error.message);
   }
 }
 
@@ -174,14 +207,6 @@ async function deleteServer(id) {
   if (!confirmed) return;
   await api(`/api/admin/servers/${id}`, { method: "DELETE" });
   await loadServers();
-}
-
-async function setQuestionStatus(id, status) {
-  await api(`/api/admin/community/questions/${id}/status`, {
-    method: "POST",
-    body: JSON.stringify({ status })
-  });
-  await loadCommunity();
 }
 
 function render() {
@@ -251,54 +276,53 @@ function renderSummary() {
   document.querySelector("#blockedCount").textContent = servers.filter((s) => s.status === "blocked").length;
 }
 
-function renderCommunity() {
-  if (questions.length === 0) {
-    questionsBody.innerHTML = `<p class="empty">No questions yet.</p>`;
-  } else {
-    questionsBody.innerHTML = questions.map((item) => `
-      <article class="activity-item">
-        <strong>${escapeHtml(item.displayName)}</strong>
-        <p>${escapeHtml(item.question)}</p>
-        <span class="activity-meta">${escapeHtml(item.status)} / ${formatDate(item.createdAt)}</span>
-        <div class="activity-actions">
-          <button onclick="window.setQuestionStatus('${item.id}', 'reviewed')">Reviewed</button>
-          <button onclick="window.setQuestionStatus('${item.id}', 'answered')">Answered</button>
-          <button onclick="window.setQuestionStatus('${item.id}', 'archived')">Archive</button>
-        </div>
-      </article>
-    `).join("");
+function renderProgressForm(item) {
+  if (!item) {
+    Object.values(progressFields).forEach((field) => {
+      if (field) field.value = "";
+    });
+    return;
   }
 
-  if (checkins.length === 0) {
-    checkinsBody.innerHTML = `<p class="empty">No check-ins yet.</p>`;
-  } else {
-    checkinsBody.innerHTML = checkins.map((item) => {
-      const name = item.globalName || item.username || item.discordId || "Discord user";
-      return `
-        <article class="activity-item">
-          <strong>${escapeHtml(name)}</strong>
-          <p>${escapeHtml(item.note || "No note supplied.")}</p>
-          <span class="activity-meta">${escapeHtml(formatMood(item.mood))}${item.moraleScore ? ` / morale ${item.moraleScore}/5` : ""} / ${escapeHtml(item.checkinDate)} / ${formatDate(item.updatedAt)}</span>
-        </article>
-      `;
-    }).join("");
-  }
+  progressFields.launchTargetAt.value = toDatetimeLocal(item.launchTargetAt);
+  progressFields.currentPhase.value = item.currentPhase || "";
+  progressFields.buildLabel.value = item.buildLabel || "";
+  progressFields.progressPercent.value = item.progressPercent ?? "";
+  progressFields.bugsFixed.value = item.bugsFixed ?? "";
+  progressFields.bugsRemaining.value = item.bugsRemaining ?? "";
+  progressFields.shipsImported.value = item.shipsImported ?? "";
+  progressFields.shipSystemsOnline.value = item.shipSystemsOnline ?? "";
+  progressFields.aircraftProfiles.value = item.aircraftProfiles ?? "";
+  progressFields.scenariosReady.value = item.scenariosReady ?? "";
+  progressFields.testPasses.value = item.testPasses ?? "";
+  progressFields.blockers.value = item.blockers ?? "";
+  progressFields.commanderNote.value = item.commanderNote || "";
 }
 
-function formatMood(value) {
-  const labels = {
-    green: "green / steady",
-    blue: "blue / quiet",
-    amber: "amber / tired",
-    red: "red / support requested",
-    gold: "gold / hyped",
-    on_station: "on station",
-    testing: "testing build",
-    watching: "watching progress",
-    blocked: "blocked",
-    other: "other"
+function readProgressForm() {
+  return {
+    launchTargetAt: progressFields.launchTargetAt.value,
+    currentPhase: progressFields.currentPhase.value,
+    buildLabel: progressFields.buildLabel.value,
+    progressPercent: progressFields.progressPercent.value,
+    bugsFixed: progressFields.bugsFixed.value,
+    bugsRemaining: progressFields.bugsRemaining.value,
+    shipsImported: progressFields.shipsImported.value,
+    shipSystemsOnline: progressFields.shipSystemsOnline.value,
+    aircraftProfiles: progressFields.aircraftProfiles.value,
+    scenariosReady: progressFields.scenariosReady.value,
+    testPasses: progressFields.testPasses.value,
+    blockers: progressFields.blockers.value,
+    commanderNote: progressFields.commanderNote.value
   };
-  return labels[value] || value || "unknown";
+}
+
+function toDatetimeLocal(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const offsetDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return offsetDate.toISOString().slice(0, 16);
 }
 
 function renderMods(mods) {
@@ -345,4 +369,3 @@ function escapeHtml(value) {
 
 window.setStatus = setStatus;
 window.deleteServer = deleteServer;
-window.setQuestionStatus = setQuestionStatus;

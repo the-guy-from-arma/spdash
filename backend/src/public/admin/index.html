@@ -23,7 +23,7 @@
       <section id="loginPanel" class="login-panel" aria-labelledby="loginTitle">
         <div>
           <h2 id="loginTitle">Owner Login</h2>
-          <p>Hard admin login only. Discord accounts cannot access owner controls.</p>
+          <p>Hard admin login only. Owner controls publish the public progress telemetry.</p>
         </div>
         <form id="loginForm" class="login-form">
           <input id="username" name="username" type="text" placeholder="Username" autocomplete="username" value="owner">
@@ -34,6 +34,73 @@
       </section>
 
       <div id="dashboardPanel" class="hidden">
+      <section class="progress-editor" aria-labelledby="progressTitle">
+        <div class="panel-head">
+          <div>
+            <h2 id="progressTitle">Public Progress Telemetry</h2>
+            <p>These values drive the launch countdown, bug board, and production stats on the public site.</p>
+          </div>
+          <span id="progressSaveState">Not synced</span>
+        </div>
+        <form id="progressForm" class="progress-form">
+          <label>
+            Launch target
+            <input id="launchTargetAt" name="launchTargetAt" type="datetime-local">
+          </label>
+          <label>
+            Current phase
+            <input id="currentPhase" name="currentPhase" type="text" maxlength="80" placeholder="Systems Integration">
+          </label>
+          <label>
+            Build label
+            <input id="buildLabel" name="buildLabel" type="text" maxlength="80" placeholder="TBMS WIP 0.0.1">
+          </label>
+          <label>
+            Completion %
+            <input id="progressPercent" name="progressPercent" type="number" min="0" max="100">
+          </label>
+          <label>
+            Bugs fixed
+            <input id="bugsFixed" name="bugsFixed" type="number" min="0">
+          </label>
+          <label>
+            Bugs remaining
+            <input id="bugsRemaining" name="bugsRemaining" type="number" min="0">
+          </label>
+          <label>
+            Ships imported
+            <input id="shipsImported" name="shipsImported" type="number" min="0">
+          </label>
+          <label>
+            Ship systems online
+            <input id="shipSystemsOnline" name="shipSystemsOnline" type="number" min="0">
+          </label>
+          <label>
+            Aircraft profiles
+            <input id="aircraftProfiles" name="aircraftProfiles" type="number" min="0">
+          </label>
+          <label>
+            Scenarios ready
+            <input id="scenariosReady" name="scenariosReady" type="number" min="0">
+          </label>
+          <label>
+            Test passes
+            <input id="testPasses" name="testPasses" type="number" min="0">
+          </label>
+          <label>
+            Blockers
+            <input id="blockers" name="blockers" type="number" min="0">
+          </label>
+          <label class="wide">
+            Public owner note
+            <textarea id="commanderNote" name="commanderNote" rows="4" maxlength="700"></textarea>
+          </label>
+          <div class="form-actions">
+            <button type="submit">Publish Progress</button>
+          </div>
+        </form>
+      </section>
+
       <section class="summary" aria-label="Summary">
         <div>
           <span id="totalCount">0</span>
@@ -86,26 +153,6 @@
         </table>
       </section>
 
-      <section class="community-grid" aria-label="Community activity">
-        <article class="community-panel">
-          <div class="panel-head">
-            <h2>Discord Questions</h2>
-            <p>Player questions submitted from the public site drawer.</p>
-          </div>
-          <div id="questionsBody" class="activity-list">
-            <p class="empty">No questions loaded.</p>
-          </div>
-        </article>
-        <article class="community-panel">
-          <div class="panel-head">
-            <h2>Daily Check-Ins</h2>
-            <p>Recent Discord station checks from the community drawer.</p>
-          </div>
-          <div id="checkinsBody" class="activity-list">
-            <p class="empty">No check-ins loaded.</p>
-          </div>
-        </article>
-      </section>
       </div>
     </main>
 

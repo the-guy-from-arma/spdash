@@ -28,8 +28,25 @@ const radio = [
   "CIC reports surface contact bearing 042, range opening.",
   "Workshop catalog synchronized from official Thunder Buddies listings.",
   "Air tasking window green for reconnaissance pass.",
-  "Logistics channel requests daily check-in from all station members."
+  "Project telemetry reports six-month launch clock active."
 ];
+
+const progress = {
+  launchTargetAt: "2026-12-17T17:00:00.000Z",
+  currentPhase: "Systems Integration",
+  buildLabel: "TBMS WIP 0.0.1",
+  progressPercent: 22,
+  bugsFixed: 18,
+  bugsRemaining: 42,
+  shipsImported: 6,
+  shipSystemsOnline: 4,
+  aircraftProfiles: 3,
+  scenariosReady: 2,
+  testPasses: 11,
+  blockers: 5,
+  commanderNote: "Six-month production clock is active. Current work is focused on ship handling, weapons behavior, scenario structure, and clean public release pacing.",
+  updatedAt: new Date().toISOString()
+};
 
 const mime = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -48,46 +65,17 @@ function json(res, body) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
-  if (url.pathname === "/api/community/config") {
+  if (url.pathname === "/api/showcase/config") {
     return json(res, {
-      discordConfigured: true,
-      discordLoginUrl: "/api/discord/login",
-      discordInviteUrl: "https://discord.gg/QsGMQh5hwz",
       workshopCatalogSource: "https://reforger.armaplatform.com/workshop?search=thunder+buddies+studios",
       products,
+      progress,
       radio
     });
   }
 
-  if (url.pathname === "/api/community/feed") {
-    return json(res, {
-      posts: [
-        {
-          category: "catalog",
-          title: "Workshop manifest online",
-          body: "The published Thunder Buddies Studios catalog is indexed for the showcase.",
-          postedAt: new Date().toISOString()
-        }
-      ],
-      events: [
-        {
-          title: "Community Muster",
-          eventType: "discord",
-          body: "Join Discord for check-ins, questions, and event calls.",
-          status: "scheduled",
-          startsAt: new Date().toISOString(),
-          linkUrl: "https://discord.gg/QsGMQh5hwz"
-        }
-      ]
-    });
-  }
-
-  if (url.pathname === "/api/community/session") {
-    return json(res, {
-      authenticated: false,
-      discordConfigured: true,
-      databaseConfigured: true
-    });
+  if (url.pathname === "/api/project/progress") {
+    return json(res, { progress });
   }
 
   const targetPath = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);

@@ -21,33 +21,28 @@ const bootPhase = document.querySelector("#bootPhase");
 const radioTicker = document.querySelector("#radioTicker");
 const commandTab = document.querySelector("#commandTab");
 const commandSignal = document.querySelector("#commandSignal");
+const heroCountdown = document.querySelector("#heroCountdown");
 const commandDrawer = document.querySelector("#commandDrawer");
 const drawerScrim = document.querySelector("#drawerScrim");
 const drawerClose = document.querySelector("#drawerClose");
 const communityStatus = document.querySelector("#communityStatus");
-const discordLogin = document.querySelector("#discordLogin");
-const discordLogout = document.querySelector("#discordLogout");
-const drawerLoginActions = document.querySelector("#drawerLoginActions");
-const stationConsole = document.querySelector("#stationConsole");
-const drawerAvatar = document.querySelector("#drawerAvatar");
-const drawerName = document.querySelector("#drawerName");
-const stationTag = document.querySelector("#stationTag");
-const stationCheckins = document.querySelector("#stationCheckins");
-const stationQuestions = document.querySelector("#stationQuestions");
-const stationToday = document.querySelector("#stationToday");
-const stationLastCheckin = document.querySelector("#stationLastCheckin");
-const checkinForm = document.querySelector("#checkinForm");
-const checkinMood = document.querySelector("#checkinMood");
-const moraleScore = document.querySelector("#moraleScore");
-const checkinNote = document.querySelector("#checkinNote");
-const checkinStatus = document.querySelector("#checkinStatus");
-const questionForm = document.querySelector("#questionForm");
-const questionText = document.querySelector("#questionText");
-const questionStatus = document.querySelector("#questionStatus");
+const progressBuildLabel = document.querySelector("#progressBuildLabel");
+const progressPhase = document.querySelector("#progressPhase");
+const progressOrbitFill = document.querySelector("#progressOrbitFill");
+const countdownDays = document.querySelector("#countdownDays");
+const countdownHours = document.querySelector("#countdownHours");
+const countdownMinutes = document.querySelector("#countdownMinutes");
+const countdownSeconds = document.querySelector("#countdownSeconds");
+const progressPercentText = document.querySelector("#progressPercentText");
+const progressBarFill = document.querySelector("#progressBarFill");
+const bugsFixed = document.querySelector("#bugsFixed");
+const bugsRemaining = document.querySelector("#bugsRemaining");
+const blockersCount = document.querySelector("#blockersCount");
+const progressStats = document.querySelector("#progressStats");
+const progressNote = document.querySelector("#progressNote");
+const progressUpdated = document.querySelector("#progressUpdated");
 const productRail = document.querySelector("#productRail");
 const drawerProducts = document.querySelector("#drawerProducts");
-const postingsFeed = document.querySelector("#postingsFeed");
-const eventsFeed = document.querySelector("#eventsFeed");
 
 const slides = [
   {
@@ -172,34 +167,29 @@ const fallbackRadio = [
   "CIC reports surface contact bearing 042, range opening.",
   "Air tasking window green for reconnaissance pass.",
   "Amphibious corridor marked, escort package requested.",
-  "Radar picket reports intermittent launch bloom beyond horizon."
+  "Radar picket reports intermittent launch bloom beyond horizon.",
+  "Project telemetry reports six-month launch clock active."
 ];
 
-const fallbackPosts = [
-  {
-    category: "command post",
-    title: "Welcome aboard TBMS",
-    body: "The Community Net opens a personal station for morale checks, questions, events, and studio updates.",
-    postedAt: new Date().toISOString()
-  }
-];
-
-const fallbackEvents = [
-  {
-    title: "Discord Muster",
-    eventType: "community",
-    body: "Join the Discord and watch for tester calls.",
-    status: "scheduled",
-    startsAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-    linkUrl: "https://discord.gg/QsGMQh5hwz"
-  }
-];
-
-let communitySession = {
-  authenticated: false,
-  discordConfigured: false,
-  databaseConfigured: false
+const fallbackProgress = {
+  launchTargetAt: "2026-12-17T17:00:00.000Z",
+  currentPhase: "Systems Integration",
+  buildLabel: "TBMS WIP 0.0.1",
+  progressPercent: 22,
+  bugsFixed: 18,
+  bugsRemaining: 42,
+  shipsImported: 6,
+  shipSystemsOnline: 4,
+  aircraftProfiles: 3,
+  scenariosReady: 2,
+  testPasses: 11,
+  blockers: 5,
+  commanderNote: "Six-month production clock is active. Current work is focused on ship handling, weapons behavior, scenario structure, and clean public release pacing.",
+  updatedAt: new Date().toISOString()
 };
+
+let activeProgress = { ...fallbackProgress };
+let countdownTimer = null;
 
 window.addEventListener("load", finishBoot);
 window.addEventListener("scroll", updateScrollMeter, { passive: true });
@@ -228,7 +218,7 @@ setupRevealObserver();
 setupRoadmapObserver();
 setupQuestions();
 setupCommandDrawer();
-loadCommunitySurface();
+loadShowcaseSurface();
 startBootSequence();
 updateScrollMeter();
 registerServiceWorker();
@@ -416,23 +406,8 @@ function setupCommandDrawer() {
     if (event.key === "Escape") closeCommandDrawer();
   });
 
-  if (discordLogout) {
-    discordLogout.addEventListener("click", async () => {
-      await fetch("/api/community/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
-      await loadCommunitySession();
-    });
-  }
-
-  if (checkinForm) {
-    checkinForm.addEventListener("submit", submitCheckIn);
-  }
-
-  if (questionForm) {
-    questionForm.addEventListener("submit", submitQuestion);
-  }
-
   const params = new URLSearchParams(window.location.search);
-  if (params.has("community")) openCommandDrawer();
+  if (params.has("telemetry") || params.has("progress")) openCommandDrawer();
 }
 
 function openCommandDrawer() {
@@ -451,116 +426,21 @@ function closeCommandDrawer() {
   drawerScrim.hidden = true;
 }
 
-async function loadCommunitySurface() {
+async function loadShowcaseSurface() {
   renderRadio(fallbackRadio);
+  renderProgress(fallbackProgress);
 
   try {
-    const configResponse = await fetch("/api/community/config", { credentials: "same-origin" });
+    const configResponse = await fetch("/api/showcase/config", { credentials: "same-origin" });
     if (configResponse.ok) {
       const config = await configResponse.json();
       renderRadio(config.radio || fallbackRadio);
       renderProducts(config.products || []);
-      if (discordLogin) discordLogin.href = config.discordLoginUrl || "/api/discord/login";
-      communitySession.discordConfigured = Boolean(config.discordConfigured);
+      renderProgress(config.progress || fallbackProgress);
     }
   } catch {
-    // Local static previews can still use the fallback radio and product content.
+    // Local static previews can still use fallback radio and project progress.
   }
-
-  await loadCommunityFeed();
-  await loadCommunitySession();
-}
-
-async function loadCommunityFeed() {
-  try {
-    const response = await fetch("/api/community/feed", { credentials: "same-origin" });
-    if (!response.ok) throw new Error("feed_failed");
-    const data = await response.json();
-    renderFeed(data.posts || fallbackPosts, data.events || fallbackEvents);
-  } catch {
-    renderFeed(fallbackPosts, fallbackEvents);
-  }
-}
-
-async function loadCommunitySession() {
-  try {
-    const response = await fetch("/api/community/session", { credentials: "same-origin" });
-    if (!response.ok) throw new Error("session_failed");
-    communitySession = await response.json();
-  } catch {
-    communitySession = {
-      authenticated: false,
-      discordConfigured: false,
-      databaseConfigured: false
-    };
-  }
-  renderCommunitySession();
-}
-
-function renderCommunitySession() {
-  const isAuthenticated = Boolean(communitySession.authenticated);
-  const isConfigured = Boolean(communitySession.discordConfigured);
-  const databaseReady = Boolean(communitySession.databaseConfigured);
-
-  if (commandSignal) commandSignal.textContent = isAuthenticated ? "Online" : "Discord";
-  if (discordLogin) discordLogin.hidden = isAuthenticated;
-  if (discordLogout) discordLogout.hidden = !isAuthenticated;
-  if (drawerLoginActions) drawerLoginActions.classList.toggle("is-authenticated", isAuthenticated);
-
-  if (stationConsole) stationConsole.hidden = !isAuthenticated;
-  if (isAuthenticated && communitySession.user) {
-    if (drawerName) drawerName.textContent = communitySession.user.globalName || communitySession.user.username;
-    if (drawerAvatar) drawerAvatar.src = communitySession.user.avatarUrl || "/assets/tbs-emblem.svg";
-    if (stationTag) stationTag.textContent = `Discord ID ${communitySession.user.discordId}`;
-    if (stationCheckins) stationCheckins.textContent = String(communitySession.checkInCount || 0).padStart(2, "0");
-    if (stationQuestions) stationQuestions.textContent = String(communitySession.questionCount || 0).padStart(2, "0");
-    if (stationToday) stationToday.textContent = communitySession.checkedInToday ? "Logged" : "Open";
-    if (stationLastCheckin) stationLastCheckin.textContent = formatLastCheckIn(communitySession.lastCheckIn);
-  }
-
-  if (communityStatus) {
-    if (isAuthenticated) {
-      communityStatus.textContent = communitySession.checkedInToday
-        ? "Station linked. Morale check logged for today."
-        : "Station linked. Morale check is open.";
-    } else if (!isConfigured) {
-      communityStatus.textContent = "Discord OAuth is not configured yet. The button opens the public Discord until Railway env vars are added.";
-    } else {
-      communityStatus.textContent = "Login with Discord to ask questions and send daily station checks.";
-    }
-  }
-
-  const formMessage = !isAuthenticated
-    ? "Login with Discord first."
-    : databaseReady
-      ? ""
-      : "Railway database is not connected yet.";
-  if (checkinStatus && formMessage) checkinStatus.textContent = formMessage;
-  if (questionStatus && formMessage) questionStatus.textContent = formMessage;
-}
-
-function formatLastCheckIn(checkIn) {
-  if (!checkIn) return "No morale check logged yet.";
-  const mood = formatMood(checkIn.mood);
-  const score = checkIn.moraleScore ? ` / morale ${checkIn.moraleScore}/5` : "";
-  const date = checkIn.checkinDate ? new Date(checkIn.checkinDate).toLocaleDateString() : "recent";
-  return `Last check: ${mood}${score} / ${date}`;
-}
-
-function formatMood(value) {
-  const labels = {
-    green: "green / steady",
-    blue: "blue / quiet",
-    amber: "amber / tired",
-    red: "red / support requested",
-    gold: "gold / hyped",
-    on_station: "on station",
-    testing: "testing build",
-    watching: "watching progress",
-    blocked: "blocked",
-    other: "other"
-  };
-  return labels[value] || value || "unknown";
 }
 
 function renderRadio(messages) {
@@ -573,6 +453,82 @@ function renderRadio(messages) {
     item.textContent = message;
     radioTicker.append(item);
   });
+}
+
+function renderProgress(progress) {
+  activeProgress = { ...fallbackProgress, ...(progress || {}) };
+  const percent = clampNumber(activeProgress.progressPercent, 0, 100);
+
+  if (commandSignal) commandSignal.textContent = `${percent}%`;
+  if (communityStatus) {
+    communityStatus.textContent = `Launch target ${formatLongDate(activeProgress.launchTargetAt)} / ${activeProgress.currentPhase}`;
+  }
+  if (progressBuildLabel) progressBuildLabel.textContent = activeProgress.buildLabel;
+  if (progressPhase) progressPhase.textContent = activeProgress.currentPhase;
+  if (progressPercentText) progressPercentText.textContent = `${percent}% complete`;
+  if (progressBarFill) progressBarFill.style.width = `${percent}%`;
+  if (progressOrbitFill?.parentElement) {
+    progressOrbitFill.parentElement.style.setProperty("--progress", `${percent * 3.6}deg`);
+  }
+  if (bugsFixed) bugsFixed.textContent = formatStat(activeProgress.bugsFixed);
+  if (bugsRemaining) bugsRemaining.textContent = formatStat(activeProgress.bugsRemaining);
+  if (blockersCount) blockersCount.textContent = formatStat(activeProgress.blockers);
+  if (progressNote) progressNote.textContent = activeProgress.commanderNote;
+  if (progressUpdated) progressUpdated.textContent = `Last updated: ${formatLongDate(activeProgress.updatedAt)}`;
+
+  renderProgressStats(activeProgress);
+  updateCountdown();
+  window.clearInterval(countdownTimer);
+  countdownTimer = window.setInterval(updateCountdown, 1000);
+}
+
+function renderProgressStats(progress) {
+  if (!progressStats) return;
+  const stats = [
+    ["Ships imported", progress.shipsImported],
+    ["Ship systems online", progress.shipSystemsOnline],
+    ["Aircraft profiles", progress.aircraftProfiles],
+    ["Scenarios ready", progress.scenariosReady],
+    ["Test passes", progress.testPasses],
+    ["Launch target", formatShortDate(progress.launchTargetAt)]
+  ];
+
+  progressStats.innerHTML = "";
+  stats.forEach(([label, value]) => {
+    const item = document.createElement("article");
+    const strong = document.createElement("strong");
+    strong.textContent = String(value);
+    const span = document.createElement("span");
+    span.textContent = label;
+    item.append(strong, span);
+    progressStats.append(item);
+  });
+}
+
+function updateCountdown() {
+  const target = new Date(activeProgress.launchTargetAt);
+  const delta = Math.max(0, target.getTime() - Date.now());
+  const totalSeconds = Math.floor(delta / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (countdownDays) countdownDays.textContent = String(days).padStart(3, "0");
+  if (countdownHours) countdownHours.textContent = String(hours).padStart(2, "0");
+  if (countdownMinutes) countdownMinutes.textContent = String(minutes).padStart(2, "0");
+  if (countdownSeconds) countdownSeconds.textContent = String(seconds).padStart(2, "0");
+  if (heroCountdown) heroCountdown.textContent = `${days} days to release target`;
+}
+
+function clampNumber(value, min, max) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return min;
+  return Math.min(max, Math.max(min, parsed));
+}
+
+function formatStat(value) {
+  return String(clampNumber(value, 0, 99999)).padStart(2, "0");
 }
 
 function renderProducts(products) {
@@ -708,121 +664,22 @@ function formatCatalogDate(value) {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function renderFeed(posts, events) {
-  if (postingsFeed) {
-    postingsFeed.innerHTML = "";
-    (posts.length ? posts : fallbackPosts).slice(0, 5).forEach((post) => {
-      const article = document.createElement("article");
-      article.className = "feed-line";
-
-      const meta = document.createElement("span");
-      meta.textContent = `${post.category || "post"} / ${formatShortDate(post.postedAt)}`;
-
-      const title = document.createElement("strong");
-      title.textContent = post.title;
-
-      const body = document.createElement("p");
-      body.textContent = post.body;
-
-      article.append(meta, title, body);
-      postingsFeed.append(article);
-    });
-  }
-
-  if (eventsFeed) {
-    eventsFeed.innerHTML = "";
-    (events.length ? events : fallbackEvents).slice(0, 5).forEach((event) => {
-      const article = document.createElement("article");
-      article.className = "event-line";
-
-      const meta = document.createElement("span");
-      meta.textContent = `${event.eventType || "event"} / ${event.status || "scheduled"} / ${formatShortDate(event.startsAt)}`;
-
-      const title = document.createElement("strong");
-      title.textContent = event.title;
-
-      const body = document.createElement("p");
-      body.textContent = event.body;
-
-      article.append(meta, title, body);
-      if (event.linkUrl) {
-        const link = document.createElement("a");
-        link.className = "text-action small";
-        link.href = event.linkUrl;
-        link.rel = "noreferrer";
-        link.textContent = "Open Brief";
-        article.append(link);
-      }
-      eventsFeed.append(article);
-    });
-  }
-}
-
 function formatShortDate(value) {
   if (!value) return "TBD";
   return new Date(value).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
-async function submitCheckIn(event) {
-  event.preventDefault();
-  if (!checkinStatus) return;
-  if (!communitySession.authenticated) {
-    checkinStatus.textContent = "Login with Discord first.";
-    return;
-  }
-
-  checkinStatus.textContent = "Sending check-in...";
-  const response = await fetch("/api/community/check-in", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      mood: checkinMood?.value || "on_station",
-      moraleScore: moraleScore?.value || "",
-      note: checkinNote?.value || ""
-    })
-  }).catch(() => null);
-
-  if (!response?.ok) {
-    checkinStatus.textContent = "Check-in failed. Confirm Railway database and Discord login are configured.";
-    return;
-  }
-
-  if (checkinNote) checkinNote.value = "";
-  checkinStatus.textContent = "Check-in logged for today.";
-  await loadCommunitySession();
-}
-
-async function submitQuestion(event) {
-  event.preventDefault();
-  if (!questionStatus) return;
-  if (!communitySession.authenticated) {
-    questionStatus.textContent = "Login with Discord first.";
-    return;
-  }
-
-  const question = questionText?.value.trim() || "";
-  if (question.length < 12) {
-    questionStatus.textContent = "Give the team a little more detail.";
-    return;
-  }
-
-  questionStatus.textContent = "Sending question...";
-  const response = await fetch("/api/community/questions", {
-    method: "POST",
-    credentials: "same-origin",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question })
-  }).catch(() => null);
-
-  if (!response?.ok) {
-    questionStatus.textContent = "Question failed. Confirm Railway database and Discord login are configured.";
-    return;
-  }
-
-  if (questionText) questionText.value = "";
-  questionStatus.textContent = "Question sent to the studio queue.";
-  await loadCommunitySession();
+function formatLongDate(value) {
+  if (!value) return "pending sync";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "pending sync";
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
 }
 
 function updateScrollMeter() {

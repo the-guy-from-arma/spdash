@@ -2,7 +2,7 @@
 
 Railway-ready public website and PWA for Thunder Buddies Studios, centered on the Mid Pacific Naval Theater for Arma Reforger.
 
-The public experience is now an official studio showcase: cinematic entrance, clean navigation, image showreel, six-month testing roadmap, Discord player login, personal station console, fleet-radio ticker, and PWA install support.
+The public experience is now an official studio showcase: cinematic entrance, clean navigation, image showreel, six-month testing roadmap, owner-published progress telemetry, fleet-radio ticker, and PWA install support.
 
 ## What This Serves
 
@@ -13,10 +13,9 @@ The public experience is now an official studio showcase: cinematic entrance, cl
   Mid Pacific Naval Theater hero
   cinematic thirteen-image slideshow
   official Workshop catalog with 44 published Thunder Buddies releases
-  Discord-backed personal station drawer
-  daily morale check-in
-  question queue
-  command postings and events feed
+  project telemetry drawer
+  six-month launch countdown
+  owner-published bug board and production stats
   six-month testing-to-community-release roadmap
   Discord community call-to-action
   PWA manifest, service worker, and offline shell
@@ -24,12 +23,12 @@ The public experience is now an official studio showcase: cinematic entrance, cl
 /admin/
   small footer login only
   hard owner/admin login only
-  no Discord access for owner controls
-  server review, community questions, and daily check-ins
+  public progress telemetry editor
+  server review
 ```
 
 The showcase can run without a database. If `DATABASE_URL` is not set, public pages and `/health` still work.
-Discord questions, morale check-ins, official postings, and events require `DATABASE_URL` to persist across deploys.
+Owner-edited progress telemetry requires `DATABASE_URL` to persist across deploys.
 
 ## Deploy On Railway
 
@@ -54,25 +53,6 @@ DATABASE_URL=<Railway Postgres URL>
 DATABASE_SSL=false
 SERVER_TTL_SECONDS=300
 ALLOW_PENDING_SERVERS=false
-```
-
-Discord community drawer variables:
-
-```text
-DISCORD_CLIENT_ID=<Discord application/client ID>
-DISCORD_CLIENT_SECRET=<Discord OAuth2 client secret>
-DISCORD_PUBLIC_KEY=<Discord application public key>
-DISCORD_REDIRECT_URI=https://tb-studios.up.railway.app/api/discord/callback
-DISCORD_INVITE_URL=https://discord.gg/QsGMQh5hwz
-COMMUNITY_SESSION_SECRET=<long random cookie signing secret>
-```
-
-For the current Discord app, use the application/client ID provided by the Discord developer portal. The public key is stored for future Discord interaction verification; the current login flow uses the client ID, client secret, and redirect URI.
-
-Discord OAuth will fail with `Invalid OAuth2 redirect_uri` unless the Discord Developer Portal has this exact redirect listed under OAuth2 redirects:
-
-```text
-https://tb-studios.up.railway.app/api/discord/callback
 ```
 
 ## Workshop Catalog
@@ -108,7 +88,7 @@ They are used for:
 ```text
 entrance b-roll effect
 hero background rotation
-simple slideshow
+cinematic slideshow
 PWA offline cache
 ```
 
