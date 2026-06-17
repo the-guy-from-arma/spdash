@@ -14,6 +14,16 @@
   </head>
   <body class="booting">
     <div class="scroll-meter" aria-hidden="true"><span id="scrollMeter"></span></div>
+    <div class="fleet-ticker" aria-label="Fleet radio traffic">
+      <span>Fleet Radio</span>
+      <div class="ticker-window">
+        <div class="ticker-track" id="radioTicker">
+          <span>CIC reports surface contact bearing 042, range opening.</span>
+          <span>Air tasking window green for reconnaissance pass.</span>
+          <span>Amphibious corridor marked, escort package requested.</span>
+        </div>
+      </div>
+    </div>
 
     <div class="intro" aria-hidden="true">
       <div class="intro-media"></div>
@@ -66,6 +76,7 @@
         <div class="navlinks">
           <a href="#theater">Theater</a>
           <a href="#gallery">Gallery</a>
+          <a href="#products">Products</a>
           <a href="#roadmap">Roadmap</a>
           <a href="#qa">Q/A</a>
           <a href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Discord</a>
@@ -149,6 +160,34 @@
             <button class="text-action small" id="nextSlide" type="button">Next</button>
           </div>
           <div class="filmstrip" id="slideThumbs" aria-label="Choose showcase image"></div>
+        </div>
+      </section>
+
+      <section class="products-section" id="products" aria-labelledby="productsTitle">
+        <div class="section-heading reveal">
+          <p class="eyebrow">Studio products</p>
+          <h2 id="productsTitle">Thunder Buddies mod pages live here.</h2>
+          <p>Three product slots are wired for Workshop or mod-page links. Send the exact pages and these buttons will point straight to the live listings.</p>
+        </div>
+        <div class="product-rail reveal" id="productRail">
+          <article class="product-item" data-product-index="0">
+            <span>Primary Mod</span>
+            <strong>Mid-Pacific Naval Theater</strong>
+            <p>Surface combatants, sea lanes, amphibious pressure, and air tasking built for Reforger operations.</p>
+            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
+          </article>
+          <article class="product-item" data-product-index="1">
+            <span>Studio Framework</span>
+            <strong>Thunder Buddies Core</strong>
+            <p>Shared configuration, community operations, showcase systems, and common release infrastructure.</p>
+            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
+          </article>
+          <article class="product-item" data-product-index="2">
+            <span>Upcoming Module</span>
+            <strong>Air-Sea Strike Package</strong>
+            <p>Jet support, HOCAS-compatible profiles, strike roles, and fleet-connected aviation objectives.</p>
+            <a class="text-action small product-link" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Open Product</a>
+          </article>
         </div>
       </section>
 
@@ -271,6 +310,69 @@
         </div>
       </section>
     </main>
+
+    <button class="command-tab" id="commandTab" type="button" aria-controls="commandDrawer" aria-expanded="false">
+      <span>Community Net</span>
+      <strong id="commandSignal">Discord</strong>
+    </button>
+    <div class="drawer-scrim" id="drawerScrim" hidden></div>
+    <aside class="command-drawer" id="commandDrawer" aria-hidden="true" aria-labelledby="commandTitle">
+      <div class="drawer-topline"></div>
+      <header class="drawer-header">
+        <div>
+          <p class="eyebrow">Right console</p>
+          <h2 id="commandTitle">Community Net</h2>
+        </div>
+        <button class="drawer-close" id="drawerClose" type="button">Close</button>
+      </header>
+
+      <p class="drawer-status" id="communityStatus">Checking Discord link...</p>
+      <div class="drawer-user" id="drawerUser" hidden>
+        <img id="drawerAvatar" src="/assets/tbs-emblem.svg" alt="">
+        <div>
+          <span>Signed in as</span>
+          <strong id="drawerName">Discord user</strong>
+        </div>
+      </div>
+
+      <div class="drawer-actions">
+        <a class="text-action primary" id="discordLogin" href="/api/discord/login">Login With Discord</a>
+        <button class="text-action small" id="discordLogout" type="button" hidden>Logout</button>
+      </div>
+
+      <section class="drawer-section">
+        <span>Daily check-in</span>
+        <form id="checkinForm">
+          <label for="checkinMood">Status</label>
+          <select id="checkinMood" name="mood">
+            <option value="on_station">On station</option>
+            <option value="testing">Testing build</option>
+            <option value="watching">Watching progress</option>
+            <option value="blocked">Blocked / needs help</option>
+            <option value="other">Other</option>
+          </select>
+          <label for="checkinNote">Optional note</label>
+          <textarea id="checkinNote" name="note" rows="3" maxlength="300" placeholder="Short check-in for the team."></textarea>
+          <button class="text-action primary" type="submit">Send Check-In</button>
+          <p class="form-status" id="checkinStatus"></p>
+        </form>
+      </section>
+
+      <section class="drawer-section">
+        <span>Ask the studio</span>
+        <form id="questionForm">
+          <label for="questionText">Question</label>
+          <textarea id="questionText" name="question" rows="5" maxlength="900" placeholder="Ask about testing, systems, release timing, ships, aircraft, or server setup."></textarea>
+          <button class="text-action primary" type="submit">Send Question</button>
+          <p class="form-status" id="questionStatus"></p>
+        </form>
+      </section>
+
+      <section class="drawer-section">
+        <span>Product links</span>
+        <div class="drawer-products" id="drawerProducts"></div>
+      </section>
+    </aside>
 
     <footer class="site-footer">
       <a href="/admin/">Login</a>

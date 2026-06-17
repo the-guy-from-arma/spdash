@@ -18,6 +18,27 @@ const bootPercent = document.querySelector("#bootPercent");
 const bootBar = document.querySelector("#bootBar");
 const bootLog = document.querySelector("#bootLog");
 const bootPhase = document.querySelector("#bootPhase");
+const radioTicker = document.querySelector("#radioTicker");
+const commandTab = document.querySelector("#commandTab");
+const commandSignal = document.querySelector("#commandSignal");
+const commandDrawer = document.querySelector("#commandDrawer");
+const drawerScrim = document.querySelector("#drawerScrim");
+const drawerClose = document.querySelector("#drawerClose");
+const communityStatus = document.querySelector("#communityStatus");
+const discordLogin = document.querySelector("#discordLogin");
+const discordLogout = document.querySelector("#discordLogout");
+const drawerUser = document.querySelector("#drawerUser");
+const drawerAvatar = document.querySelector("#drawerAvatar");
+const drawerName = document.querySelector("#drawerName");
+const checkinForm = document.querySelector("#checkinForm");
+const checkinMood = document.querySelector("#checkinMood");
+const checkinNote = document.querySelector("#checkinNote");
+const checkinStatus = document.querySelector("#checkinStatus");
+const questionForm = document.querySelector("#questionForm");
+const questionText = document.querySelector("#questionText");
+const questionStatus = document.querySelector("#questionStatus");
+const productRail = document.querySelector("#productRail");
+const drawerProducts = document.querySelector("#drawerProducts");
 
 const slides = [
   {
@@ -138,6 +159,19 @@ const bootPhases = [
   "Handoff ready"
 ];
 
+const fallbackRadio = [
+  "CIC reports surface contact bearing 042, range opening.",
+  "Air tasking window green for reconnaissance pass.",
+  "Amphibious corridor marked, escort package requested.",
+  "Radar picket reports intermittent launch bloom beyond horizon."
+];
+
+let communitySession = {
+  authenticated: false,
+  discordConfigured: false,
+  databaseConfigured: false
+};
+
 window.addEventListener("load", finishBoot);
 window.addEventListener("scroll", updateScrollMeter, { passive: true });
 window.addEventListener("resize", updateScrollMeter);
@@ -164,6 +198,8 @@ setupGallery();
 setupRevealObserver();
 setupRoadmapObserver();
 setupQuestions();
+setupCommandDrawer();
+loadCommunitySurface();
 startBootSequence();
 updateScrollMeter();
 registerServiceWorker();
@@ -341,6 +377,237 @@ function setupQuestions() {
       if (answer) answer.hidden = isOpen;
     });
   });
+}
+
+function setupCommandDrawer() {
+  if (commandTab) commandTab.addEventListener("click", openCommandDrawer);
+  if (drawerClose) drawerClose.addEventListener("click", closeCommandDrawer);
+  if (drawerScrim) drawerScrim.addEventListener("click", closeCommandDrawer);
+  window.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeCommandDrawer();
+  });
+
+  if (discordLogout) {
+    discordLogout.addEventListener("click", async () => {
+      await fetch("/api/community/logout", { method: "POST", credentials: "same-origin" }).catch(() => null);
+      await loadCommunitySession();
+    });
+  }
+
+  if (checkinForm) {
+    checkinForm.addEventListener("submit", submitCheckIn);
+  }
+
+  if (questionForm) {
+    questionForm.addEventListener("submit", submitQuestion);
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.has("community")) openCommandDrawer();
+}
+
+function openCommandDrawer() {
+  if (!commandDrawer || !drawerScrim || !commandTab) return;
+  commandDrawer.classList.add("is-open");
+  commandDrawer.setAttribute("aria-hidden", "false");
+  commandTab.setAttribute("aria-expanded", "true");
+  drawerScrim.hidden = false;
+}
+
+function closeCommandDrawer() {
+  if (!commandDrawer || !drawerScrim || !commandTab) return;
+  commandDrawer.classList.remove("is-open");
+  commandDrawer.setAttribute("aria-hidden", "true");
+  commandTab.setAttribute("aria-expanded", "false");
+  drawerScrim.hidden = true;
+}
+
+async function loadCommunitySurface() {
+  renderRadio(fallbackRadio);
+
+  try {
+    const configResponse = await fetch("/api/community/config", { credentials: "same-origin" });
+    if (configResponse.ok) {
+      const config = await configResponse.json();
+      renderRadio(config.radio || fallbackRadio);
+      renderProducts(config.products || []);
+      if (discordLogin) discordLogin.href = config.discordLoginUrl || "/api/discord/login";
+      communitySession.discordConfigured = Boolean(config.discordConfigured);
+    }
+  } catch {
+    // Local static previews can still use the fallback radio and product content.
+  }
+
+  await loadCommunitySession();
+}
+
+async function loadCommunitySession() {
+  try {
+    const response = await fetch("/api/community/session", { credentials: "same-origin" });
+    if (!response.ok) throw new Error("session_failed");
+    communitySession = await response.json();
+  } catch {
+    communitySession = {
+      authenticated: false,
+      discordConfigured: false,
+      databaseConfigured: false
+    };
+  }
+  renderCommunitySession();
+}
+
+function renderCommunitySession() {
+  const isAuthenticated = Boolean(communitySession.authenticated);
+  const isConfigured = Boolean(communitySession.discordConfigured);
+  const databaseReady = Boolean(communitySession.databaseConfigured);
+
+  if (commandSignal) commandSignal.textContent = isAuthenticated ? "Online" : "Discord";
+  if (discordLogin) discordLogin.hidden = isAuthenticated;
+  if (discordLogout) discordLogout.hidden = !isAuthenticated;
+
+  if (drawerUser) drawerUser.hidden = !isAuthenticated;
+  if (isAuthenticated && communitySession.user) {
+    if (drawerName) drawerName.textContent = communitySession.user.globalName || communitySession.user.username;
+    if (drawerAvatar) drawerAvatar.src = communitySession.user.avatarUrl || "/assets/tbs-emblem.svg";
+  }
+
+  if (communityStatus) {
+    if (isAuthenticated) {
+      communityStatus.textContent = communitySession.checkedInToday
+        ? "Discord linked. Daily check-in already logged for today."
+        : "Discord linked. Daily check-in is open.";
+    } else if (!isConfigured) {
+      communityStatus.textContent = "Discord OAuth is not configured yet. The button opens the public Discord until Railway env vars are added.";
+    } else {
+      communityStatus.textContent = "Login with Discord to ask questions and send daily station checks.";
+    }
+  }
+
+  const formMessage = !isAuthenticated
+    ? "Login with Discord first."
+    : databaseReady
+      ? ""
+      : "Railway database is not connected yet.";
+  if (checkinStatus && formMessage) checkinStatus.textContent = formMessage;
+  if (questionStatus && formMessage) questionStatus.textContent = formMessage;
+}
+
+function renderRadio(messages) {
+  if (!radioTicker) return;
+  const cleanMessages = (messages && messages.length ? messages : fallbackRadio).slice(0, 12);
+  const repeated = [...cleanMessages, ...cleanMessages];
+  radioTicker.innerHTML = "";
+  repeated.forEach((message) => {
+    const item = document.createElement("span");
+    item.textContent = message;
+    radioTicker.append(item);
+  });
+}
+
+function renderProducts(products) {
+  if (!products.length) return;
+
+  if (productRail) {
+    productRail.querySelectorAll(".product-item").forEach((item, index) => {
+      const product = products[index];
+      if (!product) return;
+      const type = item.querySelector("span");
+      const title = item.querySelector("strong");
+      const copy = item.querySelector("p");
+      const link = item.querySelector(".product-link");
+      if (type) type.textContent = `${product.type} / ${product.status}`;
+      if (title) title.textContent = product.title;
+      if (copy) copy.textContent = product.copy;
+      if (link) {
+        link.href = product.url;
+        link.textContent = product.linkConfigured ? "Open Product" : "Follow Updates";
+      }
+    });
+  }
+
+  if (drawerProducts) {
+    drawerProducts.innerHTML = "";
+    products.slice(0, 3).forEach((product) => {
+      const article = document.createElement("article");
+      article.className = "drawer-product";
+
+      const title = document.createElement("strong");
+      title.textContent = product.title;
+
+      const copy = document.createElement("p");
+      copy.textContent = product.copy;
+
+      const link = document.createElement("a");
+      link.className = "text-action small";
+      link.href = product.url;
+      link.rel = "noreferrer";
+      link.textContent = product.linkConfigured ? "Open Page" : "Follow Updates";
+
+      article.append(title, copy, link);
+      drawerProducts.append(article);
+    });
+  }
+}
+
+async function submitCheckIn(event) {
+  event.preventDefault();
+  if (!checkinStatus) return;
+  if (!communitySession.authenticated) {
+    checkinStatus.textContent = "Login with Discord first.";
+    return;
+  }
+
+  checkinStatus.textContent = "Sending check-in...";
+  const response = await fetch("/api/community/check-in", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      mood: checkinMood?.value || "on_station",
+      note: checkinNote?.value || ""
+    })
+  }).catch(() => null);
+
+  if (!response?.ok) {
+    checkinStatus.textContent = "Check-in failed. Confirm Railway database and Discord login are configured.";
+    return;
+  }
+
+  if (checkinNote) checkinNote.value = "";
+  checkinStatus.textContent = "Check-in logged for today.";
+  await loadCommunitySession();
+}
+
+async function submitQuestion(event) {
+  event.preventDefault();
+  if (!questionStatus) return;
+  if (!communitySession.authenticated) {
+    questionStatus.textContent = "Login with Discord first.";
+    return;
+  }
+
+  const question = questionText?.value.trim() || "";
+  if (question.length < 12) {
+    questionStatus.textContent = "Give the team a little more detail.";
+    return;
+  }
+
+  questionStatus.textContent = "Sending question...";
+  const response = await fetch("/api/community/questions", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question })
+  }).catch(() => null);
+
+  if (!response?.ok) {
+    questionStatus.textContent = "Question failed. Confirm Railway database and Discord login are configured.";
+    return;
+  }
+
+  if (questionText) questionText.value = "";
+  questionStatus.textContent = "Question sent to the studio queue.";
+  await loadCommunitySession();
 }
 
 function updateScrollMeter() {

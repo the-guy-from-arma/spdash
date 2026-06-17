@@ -1,4 +1,4 @@
-const CACHE_NAME = "thunder-buddies-pwa-v4";
+const CACHE_NAME = "thunder-buddies-pwa-v5";
 const APP_SHELL = [
   "/",
   "/index.html",

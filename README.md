@@ -48,6 +48,22 @@ SERVER_TTL_SECONDS=300
 ALLOW_PENDING_SERVERS=false
 ```
 
+Discord community drawer variables:
+
+```text
+DISCORD_CLIENT_ID=<Discord application/client ID>
+DISCORD_CLIENT_SECRET=<Discord OAuth2 client secret>
+DISCORD_PUBLIC_KEY=<Discord application public key>
+DISCORD_REDIRECT_URI=https://spdash-production.up.railway.app/api/discord/callback
+DISCORD_INVITE_URL=https://discord.gg/QsGMQh5hwz
+COMMUNITY_SESSION_SECRET=<long random cookie signing secret>
+MOD_PRODUCT_1_URL=<Workshop or mod page URL>
+MOD_PRODUCT_2_URL=<Workshop or mod page URL>
+MOD_PRODUCT_3_URL=<Workshop or mod page URL>
+```
+
+For the current Discord app, use the application/client ID provided by the Discord developer portal. The public key is stored for future Discord interaction verification; the current login flow uses the client ID, client secret, and redirect URI.
+
 ## PWA Files
 
 ```text

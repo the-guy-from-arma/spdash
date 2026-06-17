@@ -10,13 +10,17 @@ const loginForm = document.querySelector("#loginForm");
 const usernameInput = document.querySelector("#username");
 const passwordInput = document.querySelector("#password");
 const loginMessage = document.querySelector("#loginMessage");
+const questionsBody = document.querySelector("#questionsBody");
+const checkinsBody = document.querySelector("#checkinsBody");
 
 let servers = [];
+let questions = [];
+let checkins = [];
 let authenticated = false;
 
 loginForm.addEventListener("submit", login);
 logoutButton.addEventListener("click", logout);
-refreshButton.addEventListener("click", loadServers);
+refreshButton.addEventListener("click", loadDashboard);
 filterInput.addEventListener("input", render);
 statusFilter.addEventListener("change", render);
 
@@ -37,7 +41,7 @@ async function checkSession() {
     }
 
     setAuthState(authenticated, data.username || "owner");
-    if (authenticated) await loadServers();
+    if (authenticated) await loadDashboard();
   } catch (error) {
     loginMessage.textContent = cleanError(error.message);
     setAuthState(false, "owner");
@@ -68,7 +72,7 @@ async function login(event) {
     loginMessage.textContent = "";
     authenticated = true;
     setAuthState(true, data.username || usernameInput.value.trim() || "owner");
-    await loadServers();
+    await loadDashboard();
   } catch (error) {
     authenticated = false;
     setAuthState(false, usernameInput.value.trim() || "owner");
@@ -84,8 +88,11 @@ async function logout() {
   });
   authenticated = false;
   servers = [];
+  questions = [];
+  checkins = [];
   setAuthState(false, usernameInput.value.trim() || "owner");
   renderSummary();
+  renderCommunity();
 }
 
 function setAuthState(isAuthenticated, username) {
@@ -132,6 +139,28 @@ async function loadServers() {
   }
 }
 
+async function loadDashboard() {
+  if (!authenticated) return;
+  await Promise.all([loadServers(), loadCommunity()]);
+}
+
+async function loadCommunity() {
+  if (!authenticated) return;
+  try {
+    const [questionData, checkinData] = await Promise.all([
+      api("/api/admin/community/questions"),
+      api("/api/admin/community/checkins")
+    ]);
+    questions = questionData.questions || [];
+    checkins = checkinData.checkins || [];
+    renderCommunity();
+  } catch (error) {
+    const message = escapeHtml(cleanError(error.message));
+    questionsBody.innerHTML = `<p class="empty">${message}</p>`;
+    checkinsBody.innerHTML = `<p class="empty">${message}</p>`;
+  }
+}
+
 async function setStatus(id, status) {
   await api(`/api/admin/servers/${id}/status`, {
     method: "POST",
@@ -145,6 +174,14 @@ async function deleteServer(id) {
   if (!confirmed) return;
   await api(`/api/admin/servers/${id}`, { method: "DELETE" });
   await loadServers();
+}
+
+async function setQuestionStatus(id, status) {
+  await api(`/api/admin/community/questions/${id}/status`, {
+    method: "POST",
+    body: JSON.stringify({ status })
+  });
+  await loadCommunity();
 }
 
 function render() {
@@ -214,6 +251,40 @@ function renderSummary() {
   document.querySelector("#blockedCount").textContent = servers.filter((s) => s.status === "blocked").length;
 }
 
+function renderCommunity() {
+  if (questions.length === 0) {
+    questionsBody.innerHTML = `<p class="empty">No questions yet.</p>`;
+  } else {
+    questionsBody.innerHTML = questions.map((item) => `
+      <article class="activity-item">
+        <strong>${escapeHtml(item.displayName)}</strong>
+        <p>${escapeHtml(item.question)}</p>
+        <span class="activity-meta">${escapeHtml(item.status)} / ${formatDate(item.createdAt)}</span>
+        <div class="activity-actions">
+          <button onclick="window.setQuestionStatus('${item.id}', 'reviewed')">Reviewed</button>
+          <button onclick="window.setQuestionStatus('${item.id}', 'answered')">Answered</button>
+          <button onclick="window.setQuestionStatus('${item.id}', 'archived')">Archive</button>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  if (checkins.length === 0) {
+    checkinsBody.innerHTML = `<p class="empty">No check-ins yet.</p>`;
+  } else {
+    checkinsBody.innerHTML = checkins.map((item) => {
+      const name = item.globalName || item.username || item.discordId || "Discord user";
+      return `
+        <article class="activity-item">
+          <strong>${escapeHtml(name)}</strong>
+          <p>${escapeHtml(item.note || "No note supplied.")}</p>
+          <span class="activity-meta">${escapeHtml(item.mood)} / ${escapeHtml(item.checkinDate)} / ${formatDate(item.updatedAt)}</span>
+        </article>
+      `;
+    }).join("");
+  }
+}
+
 function renderMods(mods) {
   if (!Array.isArray(mods) || mods.length === 0) {
     return `<span class="sub">None reported</span>`;
@@ -258,3 +329,4 @@ function escapeHtml(value) {
 
 window.setStatus = setStatus;
 window.deleteServer = deleteServer;
+window.setQuestionStatus = setQuestionStatus;
