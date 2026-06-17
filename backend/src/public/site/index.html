@@ -3,255 +3,153 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Thunder Buddies Studios | Arma Reforger Mods</title>
-    <meta name="description" content="Thunder Buddies Studios showcase for Arma Reforger mods, upcoming releases, launch countdowns, videos, and community links.">
-    <meta name="theme-color" content="#0b0f0c">
+    <title>Thunder Buddies Studios | Mid Pacific Naval Theater</title>
+    <meta name="description" content="Thunder Buddies Studios official showcase for the Mid Pacific Naval Theater, an Arma Reforger work-in-progress mod project.">
+    <meta name="theme-color" content="#070907">
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="icon" href="/assets/tbs-emblem.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/assets/tbs-emblem.svg">
     <link rel="stylesheet" href="/styles.css">
-    <noscript><style>.loader{display:none}body.booting{overflow:auto}</style></noscript>
+    <noscript><style>.intro{display:none}body.booting{overflow:auto}</style></noscript>
   </head>
   <body class="booting">
-    <div class="loader" aria-hidden="true">
-      <div class="loader-panel">
-        <div class="loader-map">
-          <div class="loader-core">
-            <img src="/assets/tbs-emblem.svg" alt="">
-            <div class="loader-ring"></div>
-            <div class="loader-sweep"></div>
-          </div>
-          <div class="loader-grid"></div>
-        </div>
-        <div class="loader-copy">
-          <span>TBMS / OS boot</span>
-          <strong>Thunder Battle Management System</strong>
-          <small>Joining Thunder Buddies Studios network</small>
-        </div>
-        <div class="boot-lines">
-          <span>LOGISTICS NODE: ONLINE</span>
-          <span>FLEET OPS PACKAGE: STAGED</span>
-          <span>WORKSHOP LINK MATRIX: READY</span>
-          <span>DISCORD HANDOFF: ARMED</span>
-        </div>
-        <div class="loader-progress">
-          <span></span>
-        </div>
+    <div class="intro" aria-hidden="true">
+      <div class="intro-image"></div>
+      <div class="intro-shade"></div>
+      <div class="intro-scan"></div>
+      <div class="intro-copy">
+        <img src="/assets/tbs-emblem.svg" alt="">
+        <span>TBMS logistics handoff</span>
+        <strong>Thunder Buddies Studios</strong>
+        <small>Mid Pacific Naval Theater initializing</small>
       </div>
     </div>
 
-    <header class="hero-shell">
-      <div class="hero-media" aria-hidden="true">
-        <div class="broll broll-one"></div>
-        <div class="broll broll-two"></div>
-        <div class="broll broll-three"></div>
-        <div class="broll broll-four"></div>
-        <div class="broll broll-five"></div>
-        <div class="broll broll-six"></div>
-        <div class="tactical-grid"></div>
-        <div class="hero-shade"></div>
+    <header class="site-hero" id="home">
+      <div class="hero-broll" aria-hidden="true">
+        <div class="hero-frame frame-one"></div>
+        <div class="hero-frame frame-two"></div>
+        <div class="hero-frame frame-three"></div>
       </div>
+      <div class="hero-overlay"></div>
 
-      <nav class="topbar" aria-label="Primary">
-        <a class="studio-mark" href="/" aria-label="Thunder Buddies Studios home">
+      <nav class="navbar" aria-label="Primary">
+        <a class="brand" href="#home" aria-label="Thunder Buddies Studios home">
           <img src="/assets/tbs-emblem.svg" alt="">
           <span>Thunder Buddies Studios</span>
         </a>
-        <div class="nav-actions">
-          <a href="#mods">Mods</a>
-          <a href="#briefing">Briefing</a>
+        <div class="navlinks">
+          <a href="#theater">Theater</a>
           <a href="#showcase">Showcase</a>
-          <a href="#countdown">Launch</a>
-          <a href="#videos">Videos</a>
+          <a href="#timeline">Roadmap</a>
+          <a href="#community">Community</a>
           <a href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Discord</a>
         </div>
       </nav>
 
       <section class="hero-content" aria-labelledby="heroTitle">
-        <p class="eyebrow">Arma Reforger mod studio</p>
-        <h1 id="heroTitle">Mid Pacific Naval Theater for Arma Reforger.</h1>
-        <p class="hero-copy">Thunder Buddies Studios is revealing an ambitious work-in-progress theater built to give naval warfare a real place on the Reforger battlefield: open water, warship command, reconnaissance, amphibious support, and large-scale maritime conflict.</p>
+        <p class="eyebrow">Work in progress / Arma Reforger</p>
+        <h1 id="heroTitle">Mid Pacific Naval Theater</h1>
+        <p>Thunder Buddies Studios is building an ambitious maritime theater for Arma Reforger, designed to make open water, warship command, reconnaissance, amphibious support, and large-scale naval conflict matter.</p>
         <div class="hero-actions">
-          <a class="button primary" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">
-            <span class="button-icon" aria-hidden="true">+</span>
-            Join Discord
-          </a>
-          <a class="button secondary" href="#showcase">
-            <span class="button-icon" aria-hidden="true">i</span>
-            View Showcase
-          </a>
-          <button class="button ghost" id="installPwa" type="button" hidden>
-            <span class="button-icon" aria-hidden="true">PWA</span>
-            Install App
-          </button>
-        </div>
-        <div class="hero-stats" aria-label="Studio status">
-          <div>
-            <span>Pacific</span>
-            <small>main pack</small>
-          </div>
-          <div>
-            <span>Naval</span>
-            <small>new warfare</small>
-          </div>
-          <div>
-            <span>WIP</span>
-            <small>showcase live</small>
-          </div>
+          <a class="button primary" href="#showcase">View Showcase</a>
+          <a class="button secondary" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Join Discord</a>
+          <button class="button secondary" id="installPwa" type="button" hidden>Install PWA</button>
         </div>
       </section>
     </header>
 
     <main>
-      <section id="mods" class="mod-band" aria-labelledby="modsTitle">
-        <div class="section-heading">
-          <p class="eyebrow">Workshop pipeline</p>
-          <h2 id="modsTitle">Thunder Buddies Mod Network</h2>
-        </div>
-        <div class="mod-grid">
-          <article class="mod-card featured">
-            <div class="mod-visual visual-midway"></div>
-            <div class="mod-body">
-              <span class="status live">Main pack</span>
-              <h3>Mid Pacific Naval Theater</h3>
-              <p>A modern naval theater for Reforger that turns the ocean from empty space into a living battlefield.</p>
-              <a href="#countdown">Track launch</a>
-            </div>
-          </article>
-          <article class="mod-card">
-            <div class="mod-visual visual-core"></div>
-            <div class="mod-body">
-              <span class="status">Framework</span>
-              <h3>Fleet Operations Layer</h3>
-              <p>Warship command, reconnaissance missions, fleet coordination, amphibious support, and large-scale maritime conflict goals.</p>
-              <a href="https://reforger.armaplatform.com/workshop" rel="noreferrer">Reforger Workshop</a>
-            </div>
-          </article>
-          <article class="mod-card">
-            <div class="mod-visual visual-ops"></div>
-            <div class="mod-body">
-              <span class="status">Community</span>
-              <h3>Progress Showcases</h3>
-              <p>Additional showcases, technical demonstrations, and progress updates will be shared with the community as development continues.</p>
-              <a href="https://reforger.armaplatform.com/workshop" rel="noreferrer">Browse Workshop</a>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section id="briefing" class="briefing-section" aria-labelledby="briefingTitle">
-        <div class="briefing-copy">
-          <p class="eyebrow">Studio briefing</p>
-          <h2 id="briefingTitle">A Reforger naval theater, told like mission slides.</h2>
-          <p>These work-in-progress frames define the public pitch: Arma already owns infantry, armor, and aviation. Thunder Buddies Studios is building the missing maritime battlefield.</p>
-          <div class="slide-controls" aria-label="Briefing controls">
-            <button class="icon-button" id="prevSlide" type="button" aria-label="Previous briefing slide">Prev</button>
-            <button class="icon-button" id="nextSlide" type="button" aria-label="Next briefing slide">Next</button>
-          </div>
-        </div>
-        <div class="briefing-stage" aria-live="polite">
-          <article class="briefing-slide slide-reveal active" data-slide="0">
-            <span>01 / Reveal</span>
-            <h3>Thunder Buddies Studios reveals the Mid Pacific Naval Theater.</h3>
-            <p>An ambitious project in development for Arma Reforger.</p>
-          </article>
-          <article class="briefing-slide slide-gap" data-slide="1">
-            <span>02 / Gap</span>
-            <h3>True naval warfare has never had its place on the battlefield.</h3>
-            <p>Arma has delivered infantry combat, armored warfare, and aviation for years. This theater is built to change what the ocean means.</p>
-          </article>
-          <article class="briefing-slide slide-goal" data-slide="2">
-            <span>03 / Goal</span>
-            <h3>Our goal is to change that.</h3>
-            <p>The Mid Pacific Naval Theater gives the sea purpose, pressure, and tactical consequence.</p>
-          </article>
-          <article class="briefing-slide slide-living" data-slide="3">
-            <span>04 / Battlefield</span>
-            <h3>Transform the ocean from empty space into a living battlefield.</h3>
-            <p>The theater is designed around meaningful sea lanes, warship presence, and operational reach.</p>
-          </article>
-          <article class="briefing-slide slide-fleet" data-slide="4">
-            <span>05 / Operations</span>
-            <h3>Fight across open water and command warships.</h3>
-            <p>Coordinate fleet operations, conduct reconnaissance, support amphibious assaults, and engage enemy forces in large-scale maritime conflicts.</p>
-          </article>
-          <article class="briefing-slide slide-progress" data-slide="5">
-            <span>06 / Progress</span>
-            <h3>More showcases and technical demonstrations are coming.</h3>
-            <p>As development continues, Thunder Buddies Studios will share progress updates with the community.</p>
-          </article>
-        </div>
-      </section>
-
-      <section id="showcase" class="showcase-section" aria-labelledby="showcaseTitle">
-        <div class="section-heading">
-          <p class="eyebrow">Work in progress</p>
-          <h2 id="showcaseTitle">Mid Pacific Naval Theater showcase deck</h2>
-        </div>
-        <div class="showcase-rail" aria-label="Showcase images">
-          <article class="showcase-frame">
-            <img src="/assets/showcase/mid-pacific-reveal.png" alt="Battleship firing a missile in the Mid Pacific Naval Theater reveal slide.">
-            <div><span>01</span><strong>Reveal</strong><p>Thunder Buddies Studios is proud to reveal the Mid Pacific Naval Theater for Arma Reforger.</p></div>
-          </article>
-          <article class="showcase-frame">
-            <img src="/assets/showcase/naval-gap.png" alt="Modern warship in heavy seas showing the naval warfare gap slide.">
-            <div><span>02</span><strong>The missing battlefield</strong><p>Infantry, armor, and aviation are established. True naval warfare is the next front.</p></div>
-          </article>
-          <article class="showcase-frame">
-            <img src="/assets/showcase/goal-change.png" alt="Warships crossing open water with the goal is to change that text.">
-            <div><span>03</span><strong>Goal</strong><p>Our goal is to change that.</p></div>
-          </article>
-          <article class="showcase-frame">
-            <img src="/assets/showcase/living-battlefield.png" alt="Warship moving through dark open water in a living battlefield concept slide.">
-            <div><span>04</span><strong>Living ocean</strong><p>Transform the ocean from empty space into a living battlefield.</p></div>
-          </article>
-          <article class="showcase-frame">
-            <img src="/assets/showcase/fleet-operations.png" alt="Warship launching a missile while a helicopter flies overhead.">
-            <div><span>05</span><strong>Fleet operations</strong><p>Command warships, coordinate operations, recon targets, and support amphibious assaults.</p></div>
-          </article>
-          <article class="showcase-frame">
-            <img src="/assets/showcase/progress-updates.png" alt="Modern jet flying over mountains in a progress updates slide.">
-            <div><span>06</span><strong>Development updates</strong><p>Additional showcases, technical demonstrations, and progress updates are planned.</p></div>
-          </article>
-        </div>
-      </section>
-
-      <section id="countdown" class="launch-section" aria-labelledby="launchTitle" data-launch-date="2026-09-01T20:00:00-04:00">
+      <section class="statement" id="theater">
         <div>
-          <p class="eyebrow">Launch window</p>
-          <h2 id="launchTitle">Mid Pacific launch countdown</h2>
-          <p class="section-copy">The current release window is being tracked here. Discord will carry test-night calls, media drops, and the final launch timing.</p>
+          <p class="eyebrow">The missing battlefield</p>
+          <h2>For years, Arma has delivered infantry combat, armored warfare, and aviation.</h2>
         </div>
-        <div class="countdown-grid" aria-label="Countdown to launch">
-          <div><span id="days">--</span><small>days</small></div>
-          <div><span id="hours">--</span><small>hours</small></div>
-          <div><span id="minutes">--</span><small>minutes</small></div>
-          <div><span id="seconds">--</span><small>seconds</small></div>
+        <p class="statement-copy">True naval warfare has never had a permanent place on the battlefield. The Mid Pacific Naval Theater is designed to change that by turning the ocean from empty space into a living operational front.</p>
+      </section>
+
+      <section class="wide-image" aria-label="Mid Pacific naval warfare goal">
+        <img src="/assets/showcase/goal-change.png" alt="Warships crossing open water in the Mid Pacific Naval Theater.">
+        <div>
+          <span>Studio objective</span>
+          <strong>Our goal is to change that.</strong>
         </div>
       </section>
 
-      <section id="videos" class="video-section" aria-labelledby="videoTitle">
-        <div class="section-heading">
-          <p class="eyebrow">Field footage</p>
-          <h2 id="videoTitle">Videos and drops</h2>
+      <section class="slideshow-section" id="showcase" aria-labelledby="showcaseTitle">
+        <div class="section-title">
+          <p class="eyebrow">Official showcase</p>
+          <h2 id="showcaseTitle">Work-in-progress gallery</h2>
         </div>
-        <div class="video-grid">
-          <a class="video-card" href="https://steamcommunity.com/app/1874880/videos/" rel="noreferrer">
-            <span>Official reference</span>
-            <strong>Arma Reforger video feed</strong>
-            <small>Steam community videos</small>
-          </a>
-          <a class="video-card" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">
-            <span>Community ops</span>
-            <strong>Join the Thunder Buddies Discord</strong>
-            <small>Announcements, test nights, media drops</small>
-          </a>
-          <a class="video-card" href="https://reforger.armaplatform.com/workshop" rel="noreferrer">
-            <span>Workshop</span>
-            <strong>Reforger mod collection</strong>
-            <small>Existing and upcoming releases</small>
-          </a>
+
+        <div class="slideshow">
+          <button class="slide-nav prev" id="prevSlide" type="button" aria-label="Previous showcase image">Prev</button>
+          <figure class="slide-stage">
+            <img id="currentSlideImage" src="/assets/showcase/mid-pacific-reveal.png" alt="Thunder Buddies Studios reveals the Mid Pacific Naval Theater.">
+            <figcaption>
+              <span id="currentSlideKicker">01 / Reveal</span>
+              <strong id="currentSlideTitle">Thunder Buddies Studios reveals the Mid Pacific Naval Theater.</strong>
+              <p id="currentSlideText">An ambitious project in development for Arma Reforger.</p>
+            </figcaption>
+          </figure>
+          <button class="slide-nav next" id="nextSlide" type="button" aria-label="Next showcase image">Next</button>
         </div>
+
+        <div class="slide-thumbs" aria-label="Choose showcase image">
+          <button type="button" class="active" data-slide="0"><img src="/assets/showcase/mid-pacific-reveal.png" alt=""></button>
+          <button type="button" data-slide="1"><img src="/assets/showcase/naval-gap.png" alt=""></button>
+          <button type="button" data-slide="2"><img src="/assets/showcase/goal-change.png" alt=""></button>
+          <button type="button" data-slide="3"><img src="/assets/showcase/living-battlefield.png" alt=""></button>
+          <button type="button" data-slide="4"><img src="/assets/showcase/fleet-operations.png" alt=""></button>
+          <button type="button" data-slide="5"><img src="/assets/showcase/progress-updates.png" alt=""></button>
+        </div>
+      </section>
+
+      <section class="timeline-section" id="timeline" aria-labelledby="timelineTitle">
+        <div class="section-title">
+          <p class="eyebrow">Six-month development path</p>
+          <h2 id="timelineTitle">Testing to community release</h2>
+        </div>
+        <ol class="timeline">
+          <li>
+            <span>Month 01</span>
+            <strong>Foundation lock</strong>
+            <p>Theater scope, art direction, naval objectives, and public showcase language are locked.</p>
+          </li>
+          <li>
+            <span>Month 02</span>
+            <strong>Sea trials</strong>
+            <p>Warship movement, ocean staging, reconnaissance flow, and mission pacing are tested internally.</p>
+          </li>
+          <li>
+            <span>Month 03</span>
+            <strong>Fleet operations</strong>
+            <p>Open-water engagements, fleet coordination, amphibious support, and command roles are refined.</p>
+          </li>
+          <li>
+            <span>Month 04</span>
+            <strong>Closed community testing</strong>
+            <p>Trusted players begin structured playtests and feedback loops through Discord.</p>
+          </li>
+          <li>
+            <span>Month 05</span>
+            <strong>Public technical showcase</strong>
+            <p>Progress updates, videos, feature notes, and Workshop preparation go public.</p>
+          </li>
+          <li>
+            <span>Month 06</span>
+            <strong>Community release</strong>
+            <p>Release candidate, server readiness, Workshop links, and launch-night operations.</p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="community-section" id="community">
+        <div>
+          <p class="eyebrow">Community channel</p>
+          <h2>Follow development, testing windows, and release announcements.</h2>
+        </div>
+        <a class="button primary" href="https://discord.gg/QsGMQh5hwz" rel="noreferrer">Join Thunder Buddies Discord</a>
       </section>
     </main>
 

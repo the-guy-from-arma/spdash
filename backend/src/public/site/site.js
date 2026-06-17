@@ -1,10 +1,58 @@
-const loaderMinimumMs = 2100;
+const loaderMinimumMs = 1800;
 const startedAt = Date.now();
 const installButton = document.querySelector("#installPwa");
-const launchSection = document.querySelector("#countdown");
-const slides = [...document.querySelectorAll(".briefing-slide")];
+const slideImage = document.querySelector("#currentSlideImage");
+const slideKicker = document.querySelector("#currentSlideKicker");
+const slideTitle = document.querySelector("#currentSlideTitle");
+const slideText = document.querySelector("#currentSlideText");
+const thumbButtons = [...document.querySelectorAll(".slide-thumbs button")];
 const nextSlide = document.querySelector("#nextSlide");
 const prevSlide = document.querySelector("#prevSlide");
+
+const slides = [
+  {
+    image: "/assets/showcase/mid-pacific-reveal.png",
+    alt: "Thunder Buddies Studios reveals the Mid Pacific Naval Theater.",
+    kicker: "01 / Reveal",
+    title: "Thunder Buddies Studios reveals the Mid Pacific Naval Theater.",
+    text: "An ambitious project in development for Arma Reforger."
+  },
+  {
+    image: "/assets/showcase/naval-gap.png",
+    alt: "Modern warship in heavy seas for the naval warfare gap slide.",
+    kicker: "02 / The gap",
+    title: "True naval warfare has never had a place on the battlefield.",
+    text: "Arma has delivered infantry combat, armored warfare, and aviation. This project is built to expand the fight."
+  },
+  {
+    image: "/assets/showcase/goal-change.png",
+    alt: "Warships crossing open water.",
+    kicker: "03 / Objective",
+    title: "Our goal is to change that.",
+    text: "The ocean becomes an operational space with pressure, purpose, and consequence."
+  },
+  {
+    image: "/assets/showcase/living-battlefield.png",
+    alt: "Warship moving through open water at night.",
+    kicker: "04 / Battlefield",
+    title: "Transform the ocean from empty space into a living battlefield.",
+    text: "The Mid Pacific Naval Theater is designed around meaningful open-water operations."
+  },
+  {
+    image: "/assets/showcase/fleet-operations.png",
+    alt: "Warship launching a missile while a helicopter flies above.",
+    kicker: "05 / Operations",
+    title: "Fight across open water and command warships.",
+    text: "Coordinate fleet operations, recon missions, amphibious support, and large-scale maritime conflict."
+  },
+  {
+    image: "/assets/showcase/progress-updates.png",
+    alt: "Modern aircraft flying over mountains.",
+    kicker: "06 / Progress",
+    title: "More showcases and technical demonstrations are coming.",
+    text: "As development continues, Thunder Buddies Studios will share progress updates with the community."
+  }
+];
 
 let deferredInstallPrompt = null;
 let activeSlide = 0;
@@ -29,10 +77,12 @@ if (installButton) {
 if (nextSlide) nextSlide.addEventListener("click", () => showSlide(activeSlide + 1));
 if (prevSlide) prevSlide.addEventListener("click", () => showSlide(activeSlide - 1));
 
-window.setInterval(() => showSlide(activeSlide + 1), 9000);
-window.setInterval(updateCountdown, 1000);
+thumbButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    showSlide(Number(button.dataset.slide || 0));
+  });
+});
 
-updateCountdown();
 registerServiceWorker();
 
 function finishBoot() {
@@ -44,46 +94,19 @@ function finishBoot() {
 }
 
 function showSlide(index) {
-  if (slides.length === 0) return;
   activeSlide = (index + slides.length) % slides.length;
-  slides.forEach((slide, slideIndex) => {
-    slide.classList.toggle("active", slideIndex === activeSlide);
+  const slide = slides[activeSlide];
+  if (!slideImage || !slideKicker || !slideTitle || !slideText) return;
+
+  slideImage.src = slide.image;
+  slideImage.alt = slide.alt;
+  slideKicker.textContent = slide.kicker;
+  slideTitle.textContent = slide.title;
+  slideText.textContent = slide.text;
+
+  thumbButtons.forEach((button, buttonIndex) => {
+    button.classList.toggle("active", buttonIndex === activeSlide);
   });
-}
-
-function updateCountdown() {
-  if (!launchSection) return;
-
-  const days = document.querySelector("#days");
-  const hours = document.querySelector("#hours");
-  const minutes = document.querySelector("#minutes");
-  const seconds = document.querySelector("#seconds");
-  const launchDate = new Date(launchSection.dataset.launchDate || "").getTime();
-
-  if (!Number.isFinite(launchDate)) {
-    setCountdownValue(days, "--");
-    setCountdownValue(hours, "--");
-    setCountdownValue(minutes, "--");
-    setCountdownValue(seconds, "--");
-    return;
-  }
-
-  const remaining = Math.max(0, launchDate - Date.now());
-  const totalSeconds = Math.floor(remaining / 1000);
-  const dayValue = Math.floor(totalSeconds / 86400);
-  const hourValue = Math.floor((totalSeconds % 86400) / 3600);
-  const minuteValue = Math.floor((totalSeconds % 3600) / 60);
-  const secondValue = totalSeconds % 60;
-
-  setCountdownValue(days, dayValue);
-  setCountdownValue(hours, hourValue);
-  setCountdownValue(minutes, minuteValue);
-  setCountdownValue(seconds, secondValue);
-}
-
-function setCountdownValue(element, value) {
-  if (!element) return;
-  element.textContent = String(value).padStart(2, "0");
 }
 
 async function registerServiceWorker() {
@@ -91,6 +114,6 @@ async function registerServiceWorker() {
   try {
     await navigator.serviceWorker.register("/service-worker.js");
   } catch {
-    // The site still works normally when service workers are blocked.
+    // The site remains usable if service workers are blocked.
   }
 }
