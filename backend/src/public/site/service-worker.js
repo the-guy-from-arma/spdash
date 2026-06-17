@@ -1,4 +1,4 @@
-const CACHE_NAME = "thunder-buddies-pwa-v1";
+const CACHE_NAME = "thunder-buddies-pwa-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -12,7 +12,14 @@ const APP_SHELL = [
   "/assets/showcase/goal-change.png",
   "/assets/showcase/living-battlefield.png",
   "/assets/showcase/fleet-operations.png",
-  "/assets/showcase/progress-updates.png"
+  "/assets/showcase/progress-updates.png",
+  "/assets/showcase/open-ocean-patrol.png",
+  "/assets/showcase/missile-flight.png",
+  "/assets/showcase/carrier-group.png",
+  "/assets/showcase/air-wing-dusk.png",
+  "/assets/showcase/rain-missile-launch.png",
+  "/assets/showcase/sunset-destroyer.png",
+  "/assets/showcase/storm-barrage.png"
 ];
 
 self.addEventListener("install", (event) => {
