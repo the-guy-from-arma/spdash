@@ -1,4 +1,4 @@
-const CACHE_NAME = "thunder-buddies-pwa-v9";
+const CACHE_NAME = "thunder-buddies-pwa-v10";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,6 +7,8 @@ const APP_SHELL = [
   "/manifest.webmanifest",
   "/offline.html",
   "/assets/tbs-emblem.svg",
+  "/assets/enfusion-workbench.jpg",
+  "/assets/bohemia-interactive.jpg",
   "/assets/showcase/mid-pacific-reveal.png",
   "/assets/showcase/naval-gap.png",
   "/assets/showcase/goal-change.png",

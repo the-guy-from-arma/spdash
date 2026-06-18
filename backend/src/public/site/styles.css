@@ -759,6 +759,68 @@ main {
   font-size: clamp(38px, 5.8vw, 74px);
 }
 
+.engine-signature {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin-top: 34px;
+  border-top: 1px solid rgba(245, 241, 232, 0.18);
+  border-bottom: 1px solid rgba(245, 241, 232, 0.1);
+  padding: 20px 0;
+}
+
+.engine-quote {
+  display: grid;
+  gap: 7px;
+}
+
+.engine-quote span,
+.engine-quote small {
+  color: var(--brass);
+  font-family: var(--font-code);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.engine-quote strong {
+  max-width: 560px;
+  font-family: var(--font-display);
+  font-size: clamp(17px, 2vw, 23px);
+  line-height: 1.18;
+  font-weight: 760;
+  text-transform: uppercase;
+}
+
+.engine-quote small {
+  color: rgba(245, 241, 232, 0.46);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.engine-marks {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 18px;
+}
+
+.engine-marks img {
+  width: auto;
+  max-width: 132px;
+  height: 48px;
+  object-fit: contain;
+  opacity: 0.78;
+  mix-blend-mode: screen;
+  filter: grayscale(1) contrast(1.12);
+}
+
+.engine-marks img:last-child {
+  max-width: 142px;
+  filter: grayscale(1) invert(1) contrast(1.28);
+}
+
 .cinema-flow {
   width: min(1500px, 100%);
   margin: 0 auto;
@@ -2030,6 +2092,16 @@ main {
 
   .filmstrip {
     grid-auto-columns: minmax(160px, 74vw);
+  }
+
+  .engine-signature {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+
+  .engine-marks {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
 
   .product-rail::before {
