@@ -339,10 +339,17 @@ function setupRevealObserver() {
         if (entry.isIntersecting) entry.target.classList.add("in-view");
       });
     },
-    { threshold: 0.18 }
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.01 }
   );
 
   revealItems.forEach((item) => observer.observe(item));
+
+  window.setTimeout(() => {
+    revealItems.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      if (rect.top < window.innerHeight * 1.25) item.classList.add("in-view");
+    });
+  }, 1200);
 }
 
 function setupRoadmapObserver() {
